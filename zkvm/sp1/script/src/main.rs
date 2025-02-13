@@ -29,10 +29,12 @@ fn main() {
     let (pk, vk) = client.setup(elf);
 
     let stdin = SP1Stdin::from(&fs::read(args.input).unwrap());
-    let proof = client.prove(&pk, &stdin).run().unwrap();
 
     if args.debug {
-        println!("{:?}", proof.public_values);
-        client.verify(&proof, &vk).unwrap();
-    }
+        println!("{:?}", client.execute(elf, &stdin).run().unwrap().0);
+    };
+
+    let proof = client.prove(&pk, &stdin).run().unwrap();
+
+    client.verify(&proof, &vk).unwrap();
 }

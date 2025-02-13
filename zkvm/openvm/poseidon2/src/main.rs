@@ -12,8 +12,8 @@ use openvm::io::{read_vec, reveal};
 openvm::entry!(main);
 
 // TODO: Use extension when possible.
-// struct Poseidon2BabyBearHorizonGuest;
-// impl Poseidon2Parameter for Poseidon2BabyBearHorizonGuest { ... }
+// struct Poseidon2BabyBearHorizon;
+// impl Poseidon2Parameter for Poseidon2BabyBearHorizon { ... }
 
 fn main() {
     type I = Poseidon2Instantiation<BabyBearHorizon>;

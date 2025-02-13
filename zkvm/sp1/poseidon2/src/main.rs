@@ -1,19 +1,30 @@
 #![no_main]
 
-use hash_sig::{from_bytes, verify};
+use hash_sig::{
+    instantiation::{
+        poseidon2::{baby_bear_horizon::BabyBearHorizon, Poseidon2Instantiation, NUM_CHUNKS},
+        Instantiation,
+    },
+    VerificationInput,
+};
 use sp1_zkvm::io::{commit_slice, read_vec};
-
-mod hash_sig;
 
 sp1_zkvm::entrypoint!(main);
 
+// TODO: Use precompile when possible.
+// struct Poseidon2BabyBearHorizon;
+// impl Poseidon2Parameter for Poseidon2BabyBearHorizon { ... }
+
 pub fn main() {
-    let input = read_vec();
-    let (epoch, msg, pairs) = from_bytes(&input);
-    let output = pairs
+    type I = Poseidon2Instantiation<BabyBearHorizon>;
+    let vi: VerificationInput<I, NUM_CHUNKS> = bincode::deserialize(&read_vec()).unwrap();
+    let output = vi
+        .pairs
         .chunks(8)
         .map(|pairs| {
-            let outputs = pairs.iter().map(|(pk, sig)| verify(epoch, msg, *pk, *sig));
+            let outputs = pairs
+                .iter()
+                .map(|(pk, sig)| I::verify(vi.epoch, vi.msg, *pk, *sig).is_ok());
             outputs.rfold(0, |acc, bit| (acc << 1) ^ bit as u8)
         })
         .collect::<Vec<_>>();

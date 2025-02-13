@@ -13,9 +13,9 @@ use openvm_keccak256_guest::keccak256;
 
 openvm::entry!(main);
 
-struct Keccak256Guest;
+struct Keccak256;
 
-impl Sha3Digest for Keccak256Guest {
+impl Sha3Digest for Keccak256 {
     fn sha3_digest<const I: usize, const O: usize>(input: [u8; I]) -> [u8; O] {
         let output = keccak256(&input);
         from_fn(|i| output[i])
@@ -23,7 +23,7 @@ impl Sha3Digest for Keccak256Guest {
 }
 
 fn main() {
-    type I = Sha3Instantiation<Keccak256Guest>;
+    type I = Sha3Instantiation<Keccak256>;
     let vi: VerificationInput<I, NUM_CHUNKS> = bincode::deserialize(&read_vec()).unwrap();
     vi.pairs.chunks(32).enumerate().for_each(|(idx, pairs)| {
         let outputs = pairs
