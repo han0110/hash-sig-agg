@@ -2113,8 +2113,3 @@ dependencies = [
  "sha3",
  "subtle",
 ]
-
-[[patch.unused]]
-name = "p3-sha256"
-version = "0.1.0"
-source = "git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
