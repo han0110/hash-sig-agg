@@ -1,15 +1,15 @@
 use crate::{
     gadget::{not, select},
     poseidon2::{
-        F, GenericPoseidon2LinearLayersHorizon, HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
         chip::{
-            Bus,
             chain::{
                 column::{ChainCols, NUM_CHAIN_COLS},
                 poseidon2::{PARTIAL_ROUNDS, WIDTH},
             },
+            Bus,
         },
         hash_sig::{CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
+        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
 };
 use core::{
@@ -24,14 +24,14 @@ use openvm_stark_backend::{
     p3_matrix::Matrix,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
 };
-use p3_poseidon2_air::{Poseidon2Air, num_cols};
-use p3_poseidon2_util::horizon::baby_bear::constant::RC16;
+use p3_poseidon2_air::{num_cols, Poseidon2Air};
+use p3_poseidon2_util::instantiation::horizon::baby_bear::constant::RC16;
 
 #[derive(Debug)]
 pub struct ChainAir(
     Poseidon2Air<
         F,
-        GenericPoseidon2LinearLayersHorizon<WIDTH>,
+        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -66,7 +66,7 @@ where
             _,
             Poseidon2Air<
                 F,
-                GenericPoseidon2LinearLayersHorizon<WIDTH>,
+                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,

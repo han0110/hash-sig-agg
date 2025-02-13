@@ -1,12 +1,12 @@
 use crate::{
     gadget::{cycle_int::CycleInt, is_zero::IsZeroCols, lower_rows_filter::LowerRowsFilterCols},
     poseidon2::{
-        HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
         chip::chain::{
-            MAX_CHAIN_STEP_DIFF_BITS,
             poseidon2::{PARTIAL_ROUNDS, WIDTH},
+            MAX_CHAIN_STEP_DIFF_BITS,
         },
-        hash_sig::{CHUNK_SIZE, PARAM_FE_LEN, TARGET_SUM, TH_HASH_FE_LEN, TWEAK_FE_LEN},
+        hash_sig::{CHUNK_SIZE, HASH_FE_LEN, PARAM_FE_LEN, TARGET_SUM, TWEAK_FE_LEN},
+        HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
 };
 use core::{
@@ -15,7 +15,7 @@ use core::{
     slice,
 };
 use openvm_stark_backend::{p3_air::AirBuilder, p3_field::FieldAlgebra};
-use p3_poseidon2_util::air::{Poseidon2Cols, outputs};
+use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_CHAIN_COLS: usize = size_of::<ChainCols<u8>>();
 
@@ -114,12 +114,12 @@ impl<T: Copy> ChainCols<T> {
     }
 
     #[inline]
-    pub fn chain_input(&self) -> [T; TH_HASH_FE_LEN] {
+    pub fn chain_input(&self) -> [T; HASH_FE_LEN] {
         from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + i])
     }
 
     #[inline]
-    pub fn compression_output<AB: AirBuilder>(&self) -> [AB::Expr; TH_HASH_FE_LEN]
+    pub fn compression_output<AB: AirBuilder>(&self) -> [AB::Expr; HASH_FE_LEN]
     where
         T: Into<AB::Expr>,
     {

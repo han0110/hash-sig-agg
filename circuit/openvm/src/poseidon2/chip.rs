@@ -1,17 +1,18 @@
 use crate::poseidon2::{
-    F,
     chip::main::MainChip,
-    hash_sig::{MSG_LEN, PublicKey, Signature, VerificationTrace, encode_msg},
+    hash_sig::{VerificationInput, VerificationTrace},
+    F,
 };
 use chain::ChainChip;
 use decomposition::DecompositionChip;
+use hash_sig::instantiation::poseidon2::encode_msg;
 use merkle_tree::MerkleTreeChip;
 use openvm_stark_backend::{
-    AirRef, Chip,
     config::{Domain, StarkGenericConfig},
     p3_commit::PolynomialSpace,
     p3_maybe_rayon::prelude::*,
     prover::types::AirProofInput,
+    AirRef, Chip,
 };
 use range_check::RangeCheckChip;
 
@@ -33,21 +34,20 @@ pub enum Bus {
 
 pub fn generate_air_proof_inputs<SC: StarkGenericConfig>(
     extra_capacity_bits: usize,
-    epoch: u32,
-    msg: [u8; MSG_LEN],
-    inputs: Vec<(PublicKey, Signature)>,
+    vi: VerificationInput,
 ) -> (Vec<AirRef<SC>>, Vec<AirProofInput<SC>>)
 where
     Domain<SC>: PolynomialSpace<Val = F>,
 {
-    let encoded_msg = encode_msg(msg);
-    let traces = inputs
+    let encoded_msg = encode_msg(vi.msg);
+    let traces = vi
+        .pairs
         .into_par_iter()
-        .map(|(pk, sig)| VerificationTrace::generate(epoch, encoded_msg, pk, sig))
+        .map(|(pk, sig)| VerificationTrace::generate(vi.epoch, encoded_msg, pk, sig))
         .collect::<Vec<_>>();
     let main = MainChip::new(extra_capacity_bits, &traces);
     let chain = ChainChip::new(extra_capacity_bits, &traces);
-    let merkle_tree = MerkleTreeChip::new(extra_capacity_bits, epoch, encoded_msg, &traces);
+    let merkle_tree = MerkleTreeChip::new(extra_capacity_bits, vi.epoch, encoded_msg, &traces);
     let decomposition = DecompositionChip::new(extra_capacity_bits, &traces);
     let ((main_api, chain_api), (merkle_tree_api, (decomposition_api, range_check_mult))) = join(
         || {
@@ -85,7 +85,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        poseidon2::{F, chip::generate_air_proof_inputs, hash_sig::test::testdata},
+        poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::testdata, F},
         test::run,
     };
     use openvm_stark_backend::p3_field::extension::BinomialExtensionField;
@@ -95,8 +95,8 @@ mod test {
     #[test]
     fn chip() {
         for log_sigs in 0..10 {
-            let (epoch, msg, pairs) = testdata(log_sigs);
-            let (airs, inputs) = generate_air_proof_inputs(1, epoch, msg, pairs);
+            let testdata = testdata(log_sigs);
+            let (airs, inputs) = generate_air_proof_inputs(1, testdata);
             run::<F, E>(airs, inputs).unwrap();
         }
     }

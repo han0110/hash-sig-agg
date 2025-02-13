@@ -1,19 +1,20 @@
 use crate::poseidon2::{
-    F,
     chip::merkle_tree::{
         air::MerkleTreeAir, column::NUM_MERKLE_TREE_COLS, generation::generate_trace_rows,
     },
-    hash_sig::{MSG_FE_LEN, VerificationTrace, encode_tweak_merkle_tree, encode_tweak_msg},
+    hash_sig::{VerificationTrace, MSG_FE_LEN},
+    F,
 };
 use core::{any::type_name, iter};
 use generation::trace_height;
+use hash_sig::instantiation::poseidon2::{encode_tweak_merkle_tree, encode_tweak_msg};
 use openvm_stark_backend::{
-    Chip, ChipUsageGetter,
     config::{Domain, StarkGenericConfig},
     p3_commit::PolynomialSpace,
     p3_field::FieldAlgebra,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
+    Chip, ChipUsageGetter,
 };
 use std::sync::Arc;
 

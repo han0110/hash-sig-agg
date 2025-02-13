@@ -1,13 +1,13 @@
 use crate::{
     poseidon2::{
-        F, GenericPoseidon2LinearLayersHorizon, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE,
-        SBOX_REGISTERS,
         chip::chain::{
-            MAX_CHAIN_STEP_DIFF_BITS,
             column::{ChainCols, NUM_CHAIN_COLS},
             poseidon2::{PARTIAL_ROUNDS, WIDTH},
+            MAX_CHAIN_STEP_DIFF_BITS,
         },
-        hash_sig::{CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM, VerificationTrace},
+        hash_sig::{VerificationTrace, CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
+        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE,
+        SBOX_REGISTERS,
     },
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
@@ -74,7 +74,7 @@ pub fn generate_trace_rows_sig(
             row.sig_step.populate(sig_step);
             generate_trace_rows_for_perm::<
                 F,
-                GenericPoseidon2LinearLayersHorizon<WIDTH>,
+                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -140,7 +140,7 @@ pub fn generate_trace_row_padding(row: &mut ChainCols<MaybeUninit<F>>) {
     row.sum.write_zero();
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<WIDTH>,
+        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,

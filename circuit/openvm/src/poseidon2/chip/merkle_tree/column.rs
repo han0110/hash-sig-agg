@@ -5,7 +5,7 @@ use crate::{
         chip::merkle_tree::{PARTIAL_ROUNDS, WIDTH},
         hash_sig::{
             LOG_LIFETIME, MSG_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN, SPONGE_PERM,
-            SPONGE_RATE, TH_HASH_FE_LEN, TWEAK_FE_LEN,
+            SPONGE_RATE, HASH_FE_LEN, TWEAK_FE_LEN,
         },
     },
 };
@@ -30,7 +30,7 @@ pub struct MerkleTreeCols<T> {
     pub is_merkle_path: T,
     pub is_merkle_path_transition: T,
     pub is_recevie_merkle_tree: [T; 3],
-    pub root: [T; TH_HASH_FE_LEN],
+    pub root: [T; HASH_FE_LEN],
     pub sponge_step: CycleInt<T, SPONGE_PERM>,
     pub sponge_block: [T; SPONGE_RATE],
     pub leaf_chunk_start_ind: [T; SPONGE_RATE],
@@ -119,7 +119,7 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn compress_output<AB: AirBuilder>(&self) -> [AB::Expr; TH_HASH_FE_LEN]
+    pub fn compress_output<AB: AirBuilder>(&self) -> [AB::Expr; HASH_FE_LEN]
     where
         T: Into<AB::Expr>,
     {
@@ -132,13 +132,13 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn path_left(&self) -> [T; TH_HASH_FE_LEN] {
+    pub fn path_left(&self) -> [T; HASH_FE_LEN] {
         from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + i])
     }
 
     #[inline]
-    pub fn path_right(&self) -> [T; TH_HASH_FE_LEN] {
-        from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + TH_HASH_FE_LEN + i])
+    pub fn path_right(&self) -> [T; HASH_FE_LEN] {
+        from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + HASH_FE_LEN + i])
     }
 }
 

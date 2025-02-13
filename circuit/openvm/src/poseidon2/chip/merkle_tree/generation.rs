@@ -1,16 +1,16 @@
 use crate::{
     poseidon2::{
-        F, GenericPoseidon2LinearLayersHorizon, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
-        SBOX_REGISTERS,
         chip::merkle_tree::{
-            PARTIAL_ROUNDS, WIDTH,
             column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
+            PARTIAL_ROUNDS, WIDTH,
         },
         concat_array,
         hash_sig::{
-            CHUNK_SIZE, LOG_LIFETIME, MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_PERM, SPONGE_RATE,
-            TH_HASH_FE_LEN, VerificationTrace, encode_tweak_merkle_tree,
+            VerificationTrace, CHUNK_SIZE, HASH_FE_LEN, LOG_LIFETIME, MSG_FE_LEN,
+            SPONGE_CAPACITY_VALUES, SPONGE_PERM, SPONGE_RATE,
         },
+        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
+        SBOX_REGISTERS,
     },
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
@@ -19,6 +19,7 @@ use core::{
     iter::{self, zip},
     mem::MaybeUninit,
 };
+use hash_sig::instantiation::poseidon2::encode_tweak_merkle_tree;
 use openvm_stark_backend::{
     p3_field::FieldAlgebra,
     p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
@@ -102,7 +103,7 @@ fn generate_trace_row_msg(
     let input = trace.msg_hash_preimage(epoch, encoded_msg);
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<WIDTH>,
+        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -117,7 +118,7 @@ fn generate_trace_rows_leaf(
     epoch: u32,
     sig_idx: usize,
     trace: &VerificationTrace,
-) -> [F; TH_HASH_FE_LEN] {
+) -> [F; HASH_FE_LEN] {
     let input = from_fn(|i| {
         i.checked_sub(SPONGE_RATE)
             .map(|i| SPONGE_CAPACITY_VALUES[i])
@@ -127,51 +128,51 @@ fn generate_trace_rows_leaf(
         .chain([false])
         .chain(trace.x.iter().map(|x_i| *x_i != (1 << CHUNK_SIZE) - 1))
         .chain([false]);
-    let output =
-        rows.iter_mut()
-            .zip(trace.merkle_tree_leaf(epoch).chunks(SPONGE_RATE))
-            .enumerate()
-            .fold(input, |mut input, (sponge_step, (row, sponge_block))| {
-                zip(&mut input, sponge_block).for_each(|(input, block)| *input += *block);
-                row.sig_idx.write_usize(sig_idx);
-                row.is_msg.write_zero();
-                row.is_merkle_leaf.write_one();
-                row.is_merkle_leaf_transition
-                    .write_bool(sponge_step != SPONGE_PERM - 1);
-                if (sponge_step * SPONGE_RATE) % TH_HASH_FE_LEN == 0 {
-                    row.is_recevie_merkle_tree
-                        .fill_from_iter(is_receive_merkle_tree.by_ref().take(3).map(F::from_bool));
-                } else {
-                    row.is_recevie_merkle_tree[0].write_zero();
-                    row.is_recevie_merkle_tree[1..]
-                        .fill_from_iter(is_receive_merkle_tree.by_ref().take(2).map(F::from_bool));
-                }
-                row.is_merkle_path.write_zero();
-                row.is_merkle_path_transition.write_zero();
-                row.root.fill_from_slice(&trace.pk.merkle_root);
-                row.sponge_step.populate(sponge_step);
-                row.sponge_block[..sponge_block.len()].fill_from_slice(sponge_block);
-                row.sponge_block[sponge_block.len()..].fill_zero();
-                row.leaf_chunk_start_ind
-                    .fill_from_iter((0..SPONGE_RATE).map(|idx| {
-                        F::from_bool((sponge_step * SPONGE_RATE + idx) % TH_HASH_FE_LEN == 0)
-                    }));
-                row.leaf_chunk_idx
-                    .write_usize((sponge_step * SPONGE_RATE).div_ceil(TH_HASH_FE_LEN));
-                row.level.populate(0);
-                row.epoch_dec.write_zero();
-                row.is_right.write_zero();
-                generate_trace_rows_for_perm::<
-                    F,
-                    GenericPoseidon2LinearLayersHorizon<WIDTH>,
-                    WIDTH,
-                    SBOX_DEGREE,
-                    SBOX_REGISTERS,
-                    HALF_FULL_ROUNDS,
-                    PARTIAL_ROUNDS,
-                >(&mut row.perm, input, &RC24);
-                unsafe { from_fn(|i| outputs(&row.perm)[i].assume_init()) }
-            });
+    let output = rows
+        .iter_mut()
+        .zip(trace.merkle_tree_leaf(epoch).chunks(SPONGE_RATE))
+        .enumerate()
+        .fold(input, |mut input, (sponge_step, (row, sponge_block))| {
+            zip(&mut input, sponge_block).for_each(|(input, block)| *input += *block);
+            row.sig_idx.write_usize(sig_idx);
+            row.is_msg.write_zero();
+            row.is_merkle_leaf.write_one();
+            row.is_merkle_leaf_transition
+                .write_bool(sponge_step != SPONGE_PERM - 1);
+            if (sponge_step * SPONGE_RATE) % HASH_FE_LEN == 0 {
+                row.is_recevie_merkle_tree
+                    .fill_from_iter(is_receive_merkle_tree.by_ref().take(3).map(F::from_bool));
+            } else {
+                row.is_recevie_merkle_tree[0].write_zero();
+                row.is_recevie_merkle_tree[1..]
+                    .fill_from_iter(is_receive_merkle_tree.by_ref().take(2).map(F::from_bool));
+            }
+            row.is_merkle_path.write_zero();
+            row.is_merkle_path_transition.write_zero();
+            row.root.fill_from_slice(&trace.pk.merkle_root);
+            row.sponge_step.populate(sponge_step);
+            row.sponge_block[..sponge_block.len()].fill_from_slice(sponge_block);
+            row.sponge_block[sponge_block.len()..].fill_zero();
+            row.leaf_chunk_start_ind.fill_from_iter(
+                (0..SPONGE_RATE)
+                    .map(|idx| F::from_bool((sponge_step * SPONGE_RATE + idx) % HASH_FE_LEN == 0)),
+            );
+            row.leaf_chunk_idx
+                .write_usize((sponge_step * SPONGE_RATE).div_ceil(HASH_FE_LEN));
+            row.level.populate(0);
+            row.epoch_dec.write_zero();
+            row.is_right.write_zero();
+            generate_trace_rows_for_perm::<
+                F,
+                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+                WIDTH,
+                SBOX_DEGREE,
+                SBOX_REGISTERS,
+                HALF_FULL_ROUNDS,
+                PARTIAL_ROUNDS,
+            >(&mut row.perm, input, &RC24);
+            unsafe { from_fn(|i| outputs(&row.perm)[i].assume_init()) }
+        });
     from_fn(|i| output[i])
 }
 
@@ -181,7 +182,7 @@ fn generate_trace_rows_path(
     epoch: u32,
     sig_idx: usize,
     trace: &VerificationTrace,
-    merkle_leaf_hash: [F; TH_HASH_FE_LEN],
+    merkle_leaf_hash: [F; HASH_FE_LEN],
 ) {
     let mut epoch_dec = epoch;
     zip(rows, trace.sig.merkle_siblings).enumerate().fold(
@@ -219,7 +220,7 @@ fn generate_trace_rows_path(
             ];
             generate_trace_rows_for_perm::<
                 F,
-                GenericPoseidon2LinearLayersHorizon<WIDTH>,
+                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -261,7 +262,7 @@ pub fn generate_trace_row_padding(row: &mut MerkleTreeCols<MaybeUninit<F>>) {
     row.is_right.write_zero();
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<WIDTH>,
+        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,

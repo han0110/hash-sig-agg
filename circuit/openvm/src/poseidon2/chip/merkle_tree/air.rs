@@ -1,16 +1,16 @@
 use crate::{
     gadget::not,
     poseidon2::{
-        F, GenericPoseidon2LinearLayersHorizon, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
-        SBOX_REGISTERS,
         chip::{
-            Bus,
             merkle_tree::{
-                PARTIAL_ROUNDS, WIDTH,
                 column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
+                PARTIAL_ROUNDS, WIDTH,
             },
+            Bus,
         },
-        hash_sig::{MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE, TH_HASH_FE_LEN, TWEAK_FE_LEN},
+        hash_sig::{MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE, HASH_FE_LEN, TWEAK_FE_LEN},
+        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
+        SBOX_REGISTERS,
     },
 };
 use core::{
@@ -26,13 +26,13 @@ use openvm_stark_backend::{
     p3_matrix::Matrix,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
 };
-use p3_poseidon2_air::{Poseidon2Air, num_cols};
+use p3_poseidon2_air::{num_cols, Poseidon2Air};
 
 #[derive(Debug)]
 pub struct MerkleTreeAir(
     Poseidon2Air<
         F,
-        GenericPoseidon2LinearLayersHorizon<WIDTH>,
+        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -71,7 +71,7 @@ where
             _,
             Poseidon2Air<
                 F,
-                GenericPoseidon2LinearLayersHorizon<WIDTH>,
+                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -225,7 +225,7 @@ where
     cols.sponge_step.eval_first_row(builder);
     builder.assert_zero(cols.leaf_chunk_idx);
     (0..SPONGE_RATE)
-        .step_by(TH_HASH_FE_LEN)
+        .step_by(HASH_FE_LEN)
         .for_each(|i| builder.assert_one(cols.leaf_chunk_start_ind[i]));
     zip(&cols.perm.inputs[..SPONGE_RATE], cols.sponge_block)
         .for_each(|(a, b)| builder.assert_eq(*a, b));
@@ -247,9 +247,9 @@ fn eval_merkle_leaf_transition<AB>(
     local
         .sponge_step
         .eval_transition(&mut builder, &next.sponge_step);
-    (1..TH_HASH_FE_LEN + 1).for_each(|i| {
-        (i - 1..TH_HASH_FE_LEN)
-            .step_by(TH_HASH_FE_LEN)
+    (1..HASH_FE_LEN + 1).for_each(|i| {
+        (i - 1..HASH_FE_LEN)
+            .step_by(HASH_FE_LEN)
             .for_each(|j| {
                 builder
                     .when(local.leaf_chunk_start_ind[i])
@@ -372,7 +372,7 @@ fn receive_merkle_tree<AB>(
         iter::empty()
             .chain([local.sig_idx.into(), local.leaf_chunk_idx.into()])
             .chain(
-                local.sponge_block[..TH_HASH_FE_LEN]
+                local.sponge_block[..HASH_FE_LEN]
                     .iter()
                     .copied()
                     .map(Into::into),
@@ -386,9 +386,9 @@ fn receive_merkle_tree<AB>(
                 local.sig_idx.into(),
                 local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into(),
             ])
-            .chain((0..TH_HASH_FE_LEN).map(|i| {
+            .chain((0..HASH_FE_LEN).map(|i| {
                 (1..)
-                    .take(TH_HASH_FE_LEN)
+                    .take(HASH_FE_LEN)
                     .map(|j| local.leaf_chunk_start_ind[j] * local.sponge_block[j + i])
                     .sum()
             })),
@@ -401,9 +401,9 @@ fn receive_merkle_tree<AB>(
                 local.sig_idx.into(),
                 local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into() + AB::Expr::ONE,
             ])
-            .chain((0..TH_HASH_FE_LEN).map(|i| {
-                (1 + TH_HASH_FE_LEN..)
-                    .take(TH_HASH_FE_LEN)
+            .chain((0..HASH_FE_LEN).map(|i| {
+                (1 + HASH_FE_LEN..)
+                    .take(HASH_FE_LEN)
                     .map(|j| {
                         local.leaf_chunk_start_ind[j]
                             * (if j + i < SPONGE_RATE {

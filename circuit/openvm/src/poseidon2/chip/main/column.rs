@@ -1,6 +1,6 @@
 use crate::{
     gadget::lower_rows_filter::LowerRowsFilterCols,
-    poseidon2::hash_sig::{MSG_HASH_FE_LEN, PARAM_FE_LEN, TH_HASH_FE_LEN},
+    poseidon2::hash_sig::{HASH_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN},
 };
 use core::borrow::{Borrow, BorrowMut};
 
@@ -11,7 +11,7 @@ pub struct MainCols<T> {
     pub is_active: LowerRowsFilterCols<T>,
     pub sig_idx: T,
     pub parameter: [T; PARAM_FE_LEN],
-    pub merkle_root: [T; TH_HASH_FE_LEN],
+    pub merkle_root: [T; HASH_FE_LEN],
     pub msg_hash: [T; MSG_HASH_FE_LEN],
 }
 

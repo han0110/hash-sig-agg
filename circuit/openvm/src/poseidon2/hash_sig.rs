@@ -1,91 +1,48 @@
-use crate::poseidon2::{F, concat_array};
-use core::{array::from_fn, mem::transmute};
+use crate::poseidon2::F;
+use core::array::from_fn;
+use hash_sig::{
+    concat_array,
+    instantiation::{
+        self,
+        poseidon2::{
+            baby_bear_horizon::BabyBearHorizon, encode_tweak_chain, encode_tweak_merkle_tree,
+            encode_tweak_msg, msg_hash_to_chunks, Poseidon2Parameter,
+        },
+        Instantiation,
+    },
+};
 use num_bigint::BigUint;
-use openvm_stark_backend::p3_field::{FieldAlgebra, PrimeField32};
+use openvm_stark_backend::p3_field::PrimeField32;
 use p3_maybe_rayon::prelude::*;
-use p3_poseidon2_util::horizon::baby_bear::{poseidon2_t16_horizon, poseidon2_t24_horizon};
-use p3_symmetric::Permutation;
+
+pub use hash_sig::{
+    instantiation::poseidon2::{
+        CHUNK_SIZE, HASH_FE_LEN, MSG_FE_LEN, MSG_HASH_FE_LEN, NUM_CHUNKS, PARAM_FE_LEN, RHO_FE_LEN,
+        SPONGE_CAPACITY, SPONGE_INPUT_SIZE, SPONGE_PERM, SPONGE_RATE, TWEAK_FE_LEN,
+    },
+    LOG_LIFETIME, MSG_LEN,
+};
+
+pub type Poseidon2Instantiation = instantiation::poseidon2::Poseidon2Instantiation<BabyBearHorizon>;
+
+pub type Signature = hash_sig::Signature<
+    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Rho,
+    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Hash,
+    NUM_CHUNKS,
+>;
+
+pub type PublicKey = hash_sig::PublicKey<
+    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Parameter,
+    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Hash,
+>;
+
+pub type VerificationInput = hash_sig::VerificationInput<Poseidon2Instantiation, NUM_CHUNKS>;
 
 pub const MODULUS: u32 = F::ORDER_U32;
 
-pub const LOG_LIFETIME: usize = 20;
-pub const MSG_LEN: usize = 32;
-pub const MSG_FE_LEN: usize = (8 * MSG_LEN).div_ceil(31);
-pub const PARAM_FE_LEN: usize = 5;
-pub const RHO_FE_LEN: usize = 6;
-pub const MSG_HASH_FE_LEN: usize = 5;
-pub const TH_HASH_FE_LEN: usize = 7;
-pub const TWEAK_FE_LEN: usize = 2;
-pub const CHUNK_SIZE: usize = 2;
-pub const NUM_CHUNKS: usize = (31 * MSG_HASH_FE_LEN).div_ceil(CHUNK_SIZE);
-pub const TARGET_SUM: u16 = 117;
+pub const TARGET_SUM: u16 = <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::TARGET_SUM;
 
-pub const SPONGE_CAPACITY: usize = 9;
-pub const SPONGE_CAPACITY_VALUES: [F; SPONGE_CAPACITY] = [
-    F::new(1812885503),
-    F::new(1176861807),
-    F::new(135926247),
-    F::new(1170849646),
-    F::new(1751547645),
-    F::new(646603316),
-    F::new(1547513893),
-    F::new(423708400),
-    F::new(961239569),
-];
-pub const SPONGE_RATE: usize = 24 - SPONGE_CAPACITY;
-pub const SPONGE_INPUT_SIZE: usize = PARAM_FE_LEN + TWEAK_FE_LEN + NUM_CHUNKS * TH_HASH_FE_LEN;
-pub const SPONGE_PERM: usize = SPONGE_INPUT_SIZE.div_ceil(SPONGE_RATE);
-
-#[derive(Clone, Copy, Debug, Default)]
-pub struct PublicKey {
-    pub parameter: [F; PARAM_FE_LEN],
-    pub merkle_root: [F; TH_HASH_FE_LEN],
-}
-
-impl PublicKey {
-    const SIZE: usize = 4 * (PARAM_FE_LEN + TH_HASH_FE_LEN);
-
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        assert_eq!(bytes.len(), Self::SIZE);
-        let bytes = &mut bytes.iter().copied();
-        Self {
-            parameter: fs_from_bytes(bytes),
-            merkle_root: fs_from_bytes(bytes),
-        }
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-pub struct Signature {
-    pub rho: [F; RHO_FE_LEN],
-    pub one_time_sig: [[F; TH_HASH_FE_LEN]; NUM_CHUNKS],
-    pub merkle_siblings: [[F; TH_HASH_FE_LEN]; LOG_LIFETIME],
-}
-
-impl Signature {
-    const SIZE: usize =
-        4 * (RHO_FE_LEN + TH_HASH_FE_LEN * NUM_CHUNKS + TH_HASH_FE_LEN * LOG_LIFETIME);
-
-    pub fn from_bytes(bytes: &[u8]) -> Self {
-        assert_eq!(bytes.len(), Self::SIZE);
-        let bytes = &mut bytes.iter().copied();
-        Self {
-            rho: fs_from_bytes(bytes),
-            one_time_sig: from_fn(|_| fs_from_bytes(bytes)),
-            merkle_siblings: from_fn(|_| fs_from_bytes(bytes)),
-        }
-    }
-}
-
-impl Default for Signature {
-    fn default() -> Self {
-        Self {
-            rho: Default::default(),
-            one_time_sig: from_fn(|_| Default::default()),
-            merkle_siblings: from_fn(|_| Default::default()),
-        }
-    }
-}
+pub const SPONGE_CAPACITY_VALUES: [F; SPONGE_CAPACITY] = BabyBearHorizon::CAPACITY_VALUES;
 
 #[derive(Clone, Copy, Debug)]
 pub struct VerificationTrace {
@@ -93,7 +50,7 @@ pub struct VerificationTrace {
     pub sig: Signature,
     pub msg_hash: [F; MSG_HASH_FE_LEN],
     pub x: [u16; NUM_CHUNKS],
-    pub one_time_pk: [[F; TH_HASH_FE_LEN]; NUM_CHUNKS],
+    pub one_time_pk: [[F; HASH_FE_LEN]; NUM_CHUNKS],
     pub chain_inputs: [[F; 16]; TARGET_SUM as usize],
 }
 
@@ -104,7 +61,7 @@ impl VerificationTrace {
         pk: PublicKey,
         sig: Signature,
     ) -> Self {
-        let msg_hash = poseidon2_compress::<24, MSG_HASH_FE_LEN>(concat_array![
+        let msg_hash = BabyBearHorizon::compress_t24::<24, MSG_HASH_FE_LEN>(concat_array![
             sig.rho,
             encode_tweak_msg(epoch),
             encoded_msg,
@@ -113,7 +70,7 @@ impl VerificationTrace {
         let x = msg_hash_to_chunks(msg_hash);
         let (one_time_pk, chain_inputs) = (0..NUM_CHUNKS)
             .into_par_iter()
-            .map(|i| chain(epoch, pk.parameter, i as _, x[i], sig.one_time_sig[i]))
+            .map(|i| chain_and_input(epoch, pk.parameter, i as _, x[i], sig.one_time_sig[i]))
             .unzip::<_, _, Vec<_>, Vec<_>>();
         let chain_inputs = {
             let mut iter = chain_inputs.into_iter().flatten();
@@ -164,110 +121,37 @@ impl VerificationTrace {
     }
 }
 
-pub fn encode_msg(msg: [u8; MSG_LEN]) -> [F; MSG_FE_LEN] {
-    decompose(BigUint::from_bytes_le(&msg))
-}
-
-pub fn encode_tweak_chain(epoch: u32, i: u16, k: u16) -> [F; TWEAK_FE_LEN] {
-    const SEP: u64 = 0x00;
-    decompose(((epoch as u64) << 40) | ((i as u64) << 24) | ((k as u64) << 8) | SEP)
-}
-
-pub fn encode_tweak_merkle_tree(l: u32, i: u32) -> [F; TWEAK_FE_LEN] {
-    const SEP: u64 = 0x01;
-    decompose(((l as u64) << 40) | ((i as u64) << 8) | SEP)
-}
-
-pub fn encode_tweak_msg(epoch: u32) -> [F; TWEAK_FE_LEN] {
-    const SEP: u32 = 0x02;
-    [F::from_canonical_u32(epoch << 8 | SEP), F::ZERO] // `decompose(((epoch as u64) << 8) | SEP)`.
-}
-
-pub fn msg_hash_to_chunks(hash: [F; MSG_HASH_FE_LEN]) -> [u16; NUM_CHUNKS] {
-    const MASK: u8 = ((1 << CHUNK_SIZE) - 1) as u8;
-    let bytes = hash
-        .into_iter()
-        .fold(BigUint::ZERO, |acc, v| acc * MODULUS + v.as_canonical_u32())
-        .to_bytes_le();
-    from_fn(|i| {
-        bytes
-            .get((i * CHUNK_SIZE) / 8)
-            .map(|byte| ((byte >> ((i * CHUNK_SIZE) % 8)) & MASK))
-            .unwrap_or(0) as u16
-    })
-}
-
-pub fn chain(
+pub fn chain_and_input(
     epoch: u32,
     parameter: [F; PARAM_FE_LEN],
     i: u16,
     x_i: u16,
-    one_time_sig_i: [F; TH_HASH_FE_LEN],
-) -> ([F; TH_HASH_FE_LEN], Vec<[F; 16]>) {
+    one_time_sig_i: [F; HASH_FE_LEN],
+) -> ([F; HASH_FE_LEN], Vec<[F; 16]>) {
     (x_i + 1..(1 << CHUNK_SIZE)).fold((one_time_sig_i, Vec::new()), |(value, mut inputs), k| {
         let input = concat_array![parameter, encode_tweak_chain(epoch, i, k), value];
         inputs.push(input);
-        (poseidon2_compress::<16, TH_HASH_FE_LEN>(input), inputs)
+        (
+            BabyBearHorizon::compress_t16::<16, HASH_FE_LEN>(input),
+            inputs,
+        )
     })
-}
-
-fn decompose<const N: usize>(big: impl Into<BigUint>) -> [F; N] {
-    let mut big = big.into();
-    from_fn(|_| {
-        let rem = &big % &BigUint::from(F::ORDER_U32);
-        big /= BigUint::from(F::ORDER_U32);
-        F::from_canonical_u64(rem.iter_u64_digits().next().unwrap_or_default())
-    })
-}
-
-fn fs_from_bytes<const N: usize>(bytes: &mut impl Iterator<Item = u8>) -> [F; N] {
-    from_fn(|_| u32::from_le_bytes(from_fn(|_| bytes.next().unwrap()))).map(F::new)
-}
-
-fn poseidon2_compress<const T: usize, const O: usize>(input: [F; T]) -> [F; O] {
-    let output = poseidon2_permutation::<T>(input);
-    from_fn(|i| input[i] + output[i])
-}
-
-fn poseidon2_permutation<const T: usize>(mut state: [F; T]) -> [F; T] {
-    match T {
-        16 => poseidon2_t16_horizon()
-            .permute_mut(unsafe { transmute::<&mut [F; T], &mut [F; 16]>(&mut state) }),
-        24 => poseidon2_t24_horizon()
-            .permute_mut(unsafe { transmute::<&mut [F; T], &mut [F; 24]>(&mut state) }),
-        _ => unreachable!(),
-    };
-    state
 }
 
 #[cfg(test)]
 pub mod test {
-    use crate::poseidon2::hash_sig::{MSG_LEN, PublicKey, Signature};
-    use core::array::from_fn;
+    use crate::poseidon2::hash_sig::VerificationInput;
     use std::{fs, path::PathBuf};
 
-    pub fn testdata(log_size: usize) -> (u32, [u8; MSG_LEN], Vec<(PublicKey, Signature)>) {
+    pub fn testdata(log_size: usize) -> VerificationInput {
         let path = PathBuf::from_iter([
             env!("CARGO_MANIFEST_DIR"),
             "..",
             "..",
-            "testdata",
-            "poseidon2",
+            "hash-sig-testdata",
+            "poseidon2_baby_bear_horizon",
             (1 << log_size).to_string().as_str(),
         ]);
-        let mut bytes = fs::read(path).unwrap().into_iter();
-        let epoch = u32::from_le_bytes(from_fn(|_| bytes.next().unwrap()));
-        let msg = from_fn(|_| bytes.next().unwrap());
-        let pairs = bytes
-            .as_slice()
-            .chunks(PublicKey::SIZE + Signature::SIZE)
-            .map(|bytes| {
-                (
-                    PublicKey::from_bytes(&bytes[..PublicKey::SIZE]),
-                    Signature::from_bytes(&bytes[PublicKey::SIZE..]),
-                )
-            })
-            .collect();
-        (epoch, msg, pairs)
+        bincode::deserialize(&fs::read(path).unwrap()).unwrap()
     }
 }
