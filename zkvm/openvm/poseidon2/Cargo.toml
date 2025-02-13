@@ -4,6 +4,6 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-num-bigint = { workspace = true }
+bincode = { workspace = true }
+hash-sig = { workspace = true }
 openvm = { workspace = true }
-zkhash = { workspace = true }

@@ -15,10 +15,28 @@ const TWEAK_MSG_LEN: usize = 5;
 const CHUNK_SIZE: usize = 2;
 pub const NUM_CHUNKS: usize = (8 * MSG_HASH_LEN).div_ceil(CHUNK_SIZE);
 
+pub trait Sha3Digest {
+    fn sha3_digest<const I: usize, const O: usize>(input: [u8; I]) -> [u8; O];
+}
+
+impl Sha3Digest for Keccak256 {
+    fn sha3_digest<const I: usize, const O: usize>(input: [u8; I]) -> [u8; O] {
+        let digest = Self::digest(input);
+        from_fn(|i| digest[i])
+    }
+}
+
+impl Sha3Digest for Sha3_256 {
+    fn sha3_digest<const I: usize, const O: usize>(input: [u8; I]) -> [u8; O] {
+        let digest = Self::digest(input);
+        from_fn(|i| digest[i])
+    }
+}
+
 #[derive(Clone, Copy, Debug, Default)]
 pub struct Sha3Instantiation<P>(P);
 
-impl<P: Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
+impl<P: Sha3Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
     type Parameter = [u8; PARAM_LEN];
     type Hash = [u8; HASH_LEN];
     type Rho = [u8; RHO_LEN];
@@ -42,7 +60,7 @@ impl<P: Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
         rho: Self::Rho,
     ) -> [u16; NUM_CHUNKS] {
         const I: usize = RHO_LEN + PARAM_LEN + TWEAK_MSG_LEN + MSG_LEN;
-        let msg_hash = digest::<P, I, MSG_HASH_LEN>(concat_array![
+        let msg_hash = P::sha3_digest::<I, MSG_HASH_LEN>(concat_array![
             rho,
             parameter,
             encode_tweak_msg(epoch),
@@ -60,7 +78,7 @@ impl<P: Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
     ) -> Self::Hash {
         const I: usize = PARAM_LEN + TWEAK_CHAIN_LEN + HASH_LEN;
         (x_i + 1..(1 << CHUNK_SIZE)).fold(one_time_sig_i, |value, step| {
-            digest::<P, I, HASH_LEN>(concat_array![
+            P::sha3_digest::<I, HASH_LEN>(concat_array![
                 parameter,
                 encode_tweak_chain(epoch, i, step),
                 value,
@@ -77,7 +95,7 @@ impl<P: Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
         zip(1u8.., merkle_siblings).fold(
             {
                 const I: usize = PARAM_LEN + TWEAK_MERKLE_TREE_LEN + NUM_CHUNKS * HASH_LEN;
-                digest::<P, I, HASH_LEN>(concat_array![
+                P::sha3_digest::<I, HASH_LEN>(concat_array![
                     parameter,
                     encode_tweak_merkle_tree(0, epoch),
                     one_time_pk.into_iter().flatten(),
@@ -85,7 +103,7 @@ impl<P: Digest> Instantiation<NUM_CHUNKS> for Sha3Instantiation<P> {
             },
             |node, (level, sibling)| {
                 const I: usize = PARAM_LEN + TWEAK_MERKLE_TREE_LEN + 2 * HASH_LEN;
-                digest::<P, I, HASH_LEN>(concat_array![
+                P::sha3_digest::<I, HASH_LEN>(concat_array![
                     parameter,
                     encode_tweak_merkle_tree(level, epoch >> level),
                     (if (epoch >> (level - 1)) & 1 == 0 {
@@ -119,9 +137,4 @@ fn encode_tweak_msg(epoch: u32) -> [u8; 5] {
 fn msg_hash_to_chunks(bytes: [u8; MSG_HASH_LEN]) -> [u16; NUM_CHUNKS] {
     const MASK: u8 = ((1 << CHUNK_SIZE) - 1) as u8;
     from_fn(|i| (bytes[(i * CHUNK_SIZE) / 8] >> ((i * CHUNK_SIZE) % 8) & MASK) as _)
-}
-
-fn digest<P: Digest, const I: usize, const O: usize>(input: [u8; I]) -> [u8; O] {
-    let digest = P::digest(input);
-    from_fn(|i| digest[i])
 }

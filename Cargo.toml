@@ -19,5 +19,5 @@ sha3 = "0.10.8"
 zkhash = { git = "https://github.com/HorizenLabs/poseidon2", branch = "main", package = "zkhash" }
 
 hash-sig = { path = "hash-sig" }
-hash-sig-agg = { path = "hash-sig-agg" }
+hash-sig-testdata = { path = "hash-sig-testdata" }
 p3-poseidon2-util = { path = "p3-poseidon2-util" }
