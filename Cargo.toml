@@ -1,5 +1,5 @@
 [workspace]
-members = ["hash-sig", "hash-sig-testdata", "circuit/p3-poseidon2-util"]
+members = ["hash-sig", "hash-sig-testdata", "p3-poseidon2-util"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -20,4 +20,4 @@ zkhash = { git = "https://github.com/HorizenLabs/poseidon2", branch = "main", pa
 
 hash-sig = { path = "hash-sig" }
 hash-sig-agg = { path = "hash-sig-agg" }
-p3-poseidon2-util = { path = "circuit/p3-poseidon2-util" }
+p3-poseidon2-util = { path = "p3-poseidon2-util" }
