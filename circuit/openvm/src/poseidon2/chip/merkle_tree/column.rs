@@ -1,12 +1,12 @@
 use crate::{
     gadget::{cycle_int::CycleInt, not},
     poseidon2::{
-        HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
         chip::merkle_tree::{PARTIAL_ROUNDS, WIDTH},
         hash_sig::{
-            LOG_LIFETIME, MSG_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN, SPONGE_PERM,
-            SPONGE_RATE, HASH_FE_LEN, TWEAK_FE_LEN,
+            HASH_FE_LEN, LOG_LIFETIME, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN, SPONGE_PERM,
+            SPONGE_RATE, TWEAK_FE_LEN,
         },
+        HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
 };
 use core::{
@@ -15,7 +15,7 @@ use core::{
     slice,
 };
 use openvm_stark_backend::p3_air::AirBuilder;
-use p3_poseidon2_util::air::{Poseidon2Cols, outputs};
+use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_MERKLE_TREE_COLS: usize = size_of::<MerkleTreeCols<u8>>();
 
@@ -87,17 +87,17 @@ impl<T: Copy> MerkleTreeCols<T> {
 
     #[inline]
     pub fn msg_hash_parameter(&self) -> [T; PARAM_FE_LEN] {
-        from_fn(|i| self.perm.inputs[RHO_FE_LEN + TWEAK_FE_LEN + MSG_FE_LEN + i])
-    }
-
-    #[inline]
-    pub fn encoded_tweak_msg(&self) -> [T; PARAM_FE_LEN] {
         from_fn(|i| self.perm.inputs[RHO_FE_LEN + i])
     }
 
     #[inline]
+    pub fn encoded_tweak_msg(&self) -> [T; PARAM_FE_LEN] {
+        from_fn(|i| self.perm.inputs[RHO_FE_LEN + PARAM_FE_LEN + i])
+    }
+
+    #[inline]
     pub fn encoded_msg(&self) -> [T; PARAM_FE_LEN] {
-        from_fn(|i| self.perm.inputs[RHO_FE_LEN + TWEAK_FE_LEN + i])
+        from_fn(|i| self.perm.inputs[RHO_FE_LEN + PARAM_FE_LEN + TWEAK_FE_LEN + i])
     }
 
     #[inline]

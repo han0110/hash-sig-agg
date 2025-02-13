@@ -63,9 +63,9 @@ impl VerificationTrace {
     ) -> Self {
         let msg_hash = BabyBearHorizon::compress_t24::<24, MSG_HASH_FE_LEN>(concat_array![
             sig.rho,
+            pk.parameter,
             encode_tweak_msg(epoch),
             encoded_msg,
-            pk.parameter
         ]);
         let x = msg_hash_to_chunks(msg_hash);
         let (one_time_pk, chain_inputs) = (0..NUM_CHUNKS)
@@ -91,9 +91,9 @@ impl VerificationTrace {
     pub fn msg_hash_preimage(&self, epoch: u32, encoded_msg: [F; MSG_FE_LEN]) -> [F; 24] {
         concat_array![
             self.sig.rho,
+            self.pk.parameter,
             encode_tweak_msg(epoch),
             encoded_msg,
-            self.pk.parameter,
         ]
     }
 
@@ -152,6 +152,7 @@ pub mod test {
             "poseidon2_baby_bear_horizon",
             (1 << log_size).to_string().as_str(),
         ]);
-        bincode::deserialize(&fs::read(path).unwrap()).unwrap()
+        let data = fs::read(path).unwrap_or_else(|_| panic!("Testdata not yet generated, run `cargo run --release --bin hash-sig-testdata` in root of the repository to generate testdata."));
+        bincode::deserialize(&data).unwrap()
     }
 }

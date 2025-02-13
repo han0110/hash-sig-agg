@@ -52,9 +52,9 @@ where
     ) -> [u16; NUM_CHUNKS] {
         let msg_hash = P::compress_t24::<22, MSG_HASH_FE_LEN>(concat_array![
             rho,
+            parameter,
             encode_tweak_msg(epoch),
             encode_msg(msg),
-            parameter,
         ]);
         msg_hash_to_chunks(msg_hash)
     }
