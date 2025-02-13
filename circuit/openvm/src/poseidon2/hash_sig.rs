@@ -141,18 +141,8 @@ pub fn chain_and_input(
 #[cfg(test)]
 pub mod test {
     use crate::poseidon2::hash_sig::VerificationInput;
-    use std::{fs, path::PathBuf};
 
-    pub fn testdata(log_size: usize) -> VerificationInput {
-        let path = PathBuf::from_iter([
-            env!("CARGO_MANIFEST_DIR"),
-            "..",
-            "..",
-            "hash-sig-testdata",
-            "poseidon2_baby_bear_horizon",
-            (1 << log_size).to_string().as_str(),
-        ]);
-        let data = fs::read(path).unwrap_or_else(|_| panic!("Testdata not yet generated, run `cargo run --release --bin hash-sig-testdata` in root of the repository to generate testdata."));
-        bincode::deserialize(&data).unwrap()
+    pub fn mock_vi(size: usize) -> VerificationInput {
+        hash_sig_testdata::mock_vi(size)
     }
 }

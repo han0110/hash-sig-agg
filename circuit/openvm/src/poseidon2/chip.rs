@@ -85,7 +85,7 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::testdata, F},
+        poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::mock_vi, F},
         test::run,
     };
     use openvm_stark_backend::p3_field::extension::BinomialExtensionField;
@@ -95,8 +95,8 @@ mod test {
     #[test]
     fn chip() {
         for log_sigs in 0..10 {
-            let testdata = testdata(log_sigs);
-            let (airs, inputs) = generate_air_proof_inputs(1, testdata);
+            let vi = mock_vi(1 << log_sigs);
+            let (airs, inputs) = generate_air_proof_inputs(1, vi);
             run::<F, E>(airs, inputs).unwrap();
         }
     }

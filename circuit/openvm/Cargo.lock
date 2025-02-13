@@ -551,6 +551,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hash-sig-testdata"
+version = "0.1.0"
+dependencies = [
+ "hash-sig",
+ "rand",
+ "rayon",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.14.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -843,6 +852,7 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "hash-sig",
+ "hash-sig-testdata",
  "itertools 0.14.0",
  "num-bigint 0.4.6",
  "openvm-stark-backend",
