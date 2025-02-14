@@ -28,6 +28,7 @@ jobs:
       - name: Install toolchain for SP1
         run: |
           curl -L https://sp1up.succinct.xyz | bash
+          source ~/.bashrc
           sp1up
 
       - uses: Swatinem/rust-cache@v2
@@ -55,6 +56,7 @@ jobs:
       - name: Install toolchain for SP1
         run: |
           curl -L https://sp1up.succinct.xyz | bash
+          source ~/.bashrc
           sp1up
 
       - uses: Swatinem/rust-cache@v2
