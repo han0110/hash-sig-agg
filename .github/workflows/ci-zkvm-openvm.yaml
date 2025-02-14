@@ -25,6 +25,11 @@ jobs:
         with:
           toolchain: stable
 
+      - name: Install toolchain for OpenVM
+        run:
+          rustup install nightly-2024-10-30
+          rustup component add rust-src --toolchain nightly-2024-10-30
+
       - uses: Swatinem/rust-cache@v2
         with:
           cache-on-failure: true
@@ -46,6 +51,11 @@ jobs:
         with:
           toolchain: stable
           components: rust-docs, rustfmt, clippy
+
+      - name: Install toolchain for OpenVM
+        run:
+          rustup install nightly-2024-10-30
+          rustup component add rust-src --toolchain nightly-2024-10-30
 
       - uses: Swatinem/rust-cache@v2
         with:
