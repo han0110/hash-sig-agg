@@ -35,10 +35,10 @@ jobs:
           cache-on-failure: true
 
       - name: Run instantiation sha3
-        run: cargo run -r --bin hash-sig-agg-zkvm-sp1-script -- -i sha3 --size 1 --debug
+        run: cargo run --release --bin hash-sig-agg-zkvm-sp1-script -- -i sha3 --size 1 --debug
 
       - name: Run instantiation poseidon2-baby-bear
-        run: cargo run -r --bin hash-sig-agg-zkvm-sp1-script -- -i poseidon2-baby-bear --size 1 --debug
+        run: cargo run --release --bin hash-sig-agg-zkvm-sp1-script -- -i poseidon2-baby-bear --size 1 --debug
 
   lint:
     name: Lint

@@ -35,10 +35,10 @@ jobs:
           cache-on-failure: true
 
       - name: Run instantiation keccak256
-        run: cargo run -r --bin hash-sig-agg-zkvm-openvm-script -- -i keccak256 --size 1 --debug
+        run: cargo run --release --bin hash-sig-agg-zkvm-openvm-script -- -i keccak256 --size 1 --debug
 
       - name: Run instantiation poseidon2-baby-bear
-        run: cargo run -r --bin hash-sig-agg-zkvm-openvm-script -- -i poseidon2-baby-bear --size 1 --debug
+        run: cargo run --release --bin hash-sig-agg-zkvm-openvm-script -- -i poseidon2-baby-bear --size 1 --debug
 
   lint:
     name: Lint

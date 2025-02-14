@@ -5,7 +5,6 @@ use hash_sig_verifier::{
     instantiation::{
         self,
         poseidon2::{baby_bear_horizon::BabyBearHorizon, msg_hash_to_chunks, Poseidon2Parameter},
-        Instantiation,
     },
 };
 use num_bigint::BigUint;
@@ -23,16 +22,9 @@ pub use hash_sig_verifier::{
 
 pub type Poseidon2TargetSum = instantiation::poseidon2::Poseidon2TargetSum<BabyBearHorizon>;
 
-pub type Signature = hash_sig_verifier::Signature<
-    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Rho,
-    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Hash,
-    NUM_CHUNKS,
->;
+pub type Signature = hash_sig_verifier::Signature<Poseidon2TargetSum, NUM_CHUNKS>;
 
-pub type PublicKey = hash_sig_verifier::PublicKey<
-    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Parameter,
-    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Hash,
->;
+pub type PublicKey = hash_sig_verifier::PublicKey<Poseidon2TargetSum, NUM_CHUNKS>;
 
 pub type VerificationInput = hash_sig_verifier::VerificationInput<Poseidon2TargetSum, NUM_CHUNKS>;
 

@@ -6,7 +6,9 @@ use serde::{de::DeserializeOwned, Serialize};
 pub mod poseidon2;
 pub mod sha3;
 
-pub trait Instantiation<const NUM_CHUNKS: usize> {
+pub trait Instantiation<const NUM_CHUNKS: usize>:
+    Clone + Copy + Debug + Sized + Send + Sync + Serialize + DeserializeOwned
+{
     type Parameter: Clone
         + Copy
         + Debug
@@ -66,8 +68,8 @@ pub trait Instantiation<const NUM_CHUNKS: usize> {
     fn verify(
         epoch: u32,
         msg: [u8; MSG_LEN],
-        pk: PublicKey<Self::Parameter, Self::Hash>,
-        sig: Signature<Self::Rho, Self::Hash, NUM_CHUNKS>,
+        pk: PublicKey<Self, NUM_CHUNKS>,
+        sig: Signature<Self, NUM_CHUNKS>,
     ) -> Result<(), String> {
         let x = Self::encode(epoch, msg, pk.parameter, sig.rho)?;
         let one_time_pk =

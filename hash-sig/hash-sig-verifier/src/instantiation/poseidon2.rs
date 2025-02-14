@@ -1,8 +1,9 @@
 use crate::{concat_array, instantiation::Instantiation, LOG_LIFETIME, MSG_LEN};
-use core::{array::from_fn, fmt::Debug, iter::zip};
+use core::{array::from_fn, fmt::Debug, iter::zip, marker::PhantomData};
 use num_bigint::BigUint;
 use p3_field::PrimeField32;
 use rand::{distributions::Standard, prelude::Distribution, Rng};
+use serde::{Deserialize, Serialize};
 
 pub mod baby_bear_horizon;
 pub mod koala_bear_horizon;
@@ -22,8 +23,8 @@ pub const SPONGE_RATE: usize = 24 - SPONGE_CAPACITY;
 pub const SPONGE_INPUT_SIZE: usize = PARAM_FE_LEN + TWEAK_FE_LEN + NUM_CHUNKS * HASH_FE_LEN;
 pub const SPONGE_PERM: usize = SPONGE_INPUT_SIZE.div_ceil(SPONGE_RATE);
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Poseidon2TargetSum<P>(P);
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
+pub struct Poseidon2TargetSum<P>(PhantomData<P>);
 
 impl<P: Poseidon2Parameter> Instantiation<NUM_CHUNKS> for Poseidon2TargetSum<P>
 where
@@ -111,7 +112,7 @@ where
     }
 }
 
-pub trait Poseidon2Parameter: Clone + Copy + Debug + Default {
+pub trait Poseidon2Parameter: Clone + Copy + Debug + Sized + Send + Sync {
     type F: PrimeField32;
 
     const CAPACITY_VALUES: [Self::F; SPONGE_CAPACITY];

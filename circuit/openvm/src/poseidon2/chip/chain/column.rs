@@ -52,7 +52,7 @@ impl<T> ChainCols<T> {
     }
 
     #[inline]
-    pub fn as_slice_mut(&mut self) -> &mut [T] {
+    pub const fn as_slice_mut(&mut self) -> &mut [T] {
         unsafe { slice::from_raw_parts_mut(core::ptr::from_mut(self).cast::<T>(), NUM_CHAIN_COLS) }
     }
 }

@@ -4,8 +4,9 @@ use p3_poseidon2_util::instantiation::horizon::baby_bear::{
     poseidon2_baby_bear_horizon_t16, poseidon2_baby_bear_horizon_t24,
 };
 use p3_symmetric::Permutation;
+use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Copy, Debug, Default)]
+#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
 pub struct BabyBearHorizon;
 
 impl Poseidon2Parameter for BabyBearHorizon {

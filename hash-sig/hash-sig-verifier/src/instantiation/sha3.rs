@@ -1,6 +1,7 @@
 use crate::{concat_array, instantiation::Instantiation, LOG_LIFETIME, MSG_LEN};
-use core::{array::from_fn, iter::zip};
+use core::{array::from_fn, fmt::Debug, iter::zip, marker::PhantomData};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 use sha3::Digest;
 
 pub use sha3::{Keccak256, Sha3_256};
@@ -16,7 +17,7 @@ pub const CHUNK_SIZE: usize = 2;
 pub const NUM_CHUNKS: usize = (8 * MSG_HASH_LEN).div_ceil(CHUNK_SIZE);
 pub const TARGET_SUM: u16 = (NUM_CHUNKS + NUM_CHUNKS.div_ceil(2)) as u16;
 
-pub trait Sha3Digest {
+pub trait Sha3Digest: Debug + Sized + Send + Sync {
     fn sha3_digest<const I: usize, const O: usize>(input: [u8; I]) -> [u8; O];
 }
 
@@ -34,8 +35,16 @@ impl Sha3Digest for Sha3_256 {
     }
 }
 
-#[derive(Clone, Copy, Debug, Default)]
-pub struct Sha3TargetSum<P>(P);
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Sha3TargetSum<P>(PhantomData<P>);
+
+impl<P> Clone for Sha3TargetSum<P> {
+    fn clone(&self) -> Self {
+        *self
+    }
+}
+
+impl<P> Copy for Sha3TargetSum<P> {}
 
 impl<P: Sha3Digest> Instantiation<NUM_CHUNKS> for Sha3TargetSum<P> {
     type Parameter = [u8; PARAM_LEN];

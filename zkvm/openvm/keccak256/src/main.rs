@@ -13,6 +13,7 @@ use openvm_keccak256_guest::keccak256;
 
 openvm::entry!(main);
 
+#[derive(Debug)]
 struct Keccak256;
 
 impl Sha3Digest for Keccak256 {
