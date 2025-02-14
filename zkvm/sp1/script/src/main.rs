@@ -59,7 +59,14 @@ fn main() {
     let stdin = SP1Stdin::from(&args.instantiation.mock_vi(args.size));
 
     if args.debug {
-        println!("{:?}", client.execute(elf, &stdin).run().unwrap().0);
+        let output = client.execute(elf, &stdin).run().unwrap().0;
+        println!("{:?}", output.as_slice());
+        output
+            .as_slice()
+            .iter()
+            .flat_map(|byte| (0..8).map(|i| *byte >> i & 1 == 1))
+            .take(args.size)
+            .for_each(|is_valid| assert!(is_valid));
     };
 
     let proof = client.prove(&pk, &stdin).run().unwrap();

@@ -10,7 +10,9 @@ use openvm_sdk::{
     config::{AppConfig, SdkVmConfig},
     Sdk, StdIn,
 };
-use openvm_stark_sdk::{config::FriParameters, p3_baby_bear::BabyBear};
+use openvm_stark_sdk::{
+    config::FriParameters, openvm_stark_backend::p3_field::PrimeField32, p3_baby_bear::BabyBear,
+};
 use openvm_transpiler::{elf::Elf, openvm_platform::memory::MEM_SIZE, FromElf};
 use std::{fs, path::PathBuf, sync::Arc};
 
@@ -68,6 +70,11 @@ fn main() {
             .execute(exe.clone(), config.clone(), stdin.clone())
             .unwrap();
         println!("{:?}", output);
+        output
+            .iter()
+            .flat_map(|byte| (0..8).map(|i| byte.as_canonical_u32() >> i & 1 == 1))
+            .take(args.size)
+            .for_each(|is_valid| assert!(is_valid));
     }
 
     let committed_exe = Sdk.commit_app_exe(pk.app_fri_params(), exe).unwrap();
