@@ -1,20 +1,20 @@
 use crate::poseidon2::{
-    F,
     chip::decomposition::{
         air::DecompositionAir,
         column::NUM_DECOMPOSITION_COLS,
         generation::{generate_trace_rows, trace_height},
     },
-    hash_sig::{MSG_HASH_FE_LEN, VerificationTrace},
+    hash_sig::{VerificationTrace, MSG_HASH_FE_LEN},
+    F,
 };
 use core::any::type_name;
 use openvm_stark_backend::{
-    Chip, ChipUsageGetter,
     config::{Domain, StarkGenericConfig},
     p3_commit::PolynomialSpace,
     p3_field::PrimeField32,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
+    Chip, ChipUsageGetter,
 };
 use std::sync::Arc;
 

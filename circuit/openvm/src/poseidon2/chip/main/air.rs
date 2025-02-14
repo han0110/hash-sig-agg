@@ -1,9 +1,9 @@
 use crate::poseidon2::{
-    F,
     chip::{
-        Bus,
         main::column::{MainCols, NUM_MAIN_COLS},
+        Bus,
     },
+    F,
 };
 use core::{borrow::Borrow, iter};
 use openvm_stark_backend::{

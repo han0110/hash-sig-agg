@@ -1,16 +1,16 @@
 use crate::poseidon2::{
-    F,
     chip::main::{air::MainAir, column::NUM_MAIN_COLS},
     hash_sig::VerificationTrace,
+    F,
 };
 use core::any::type_name;
 use generation::{generate_trace_rows, trace_height};
 use openvm_stark_backend::{
-    Chip, ChipUsageGetter,
     config::{Domain, StarkGenericConfig},
     p3_commit::PolynomialSpace,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
+    Chip, ChipUsageGetter,
 };
 use std::sync::Arc;
 

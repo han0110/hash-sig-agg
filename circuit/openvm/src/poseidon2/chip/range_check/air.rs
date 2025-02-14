@@ -1,9 +1,9 @@
 use crate::poseidon2::{
-    F,
     chip::{
+        range_check::column::{RangeCheckCols, NUM_RANGE_CHECK_COLS},
         Bus,
-        range_check::column::{NUM_RANGE_CHECK_COLS, RangeCheckCols},
     },
+    F,
 };
 use core::borrow::Borrow;
 use openvm_stark_backend::{

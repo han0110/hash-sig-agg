@@ -1,11 +1,11 @@
 use crate::{
     poseidon2::{
-        F,
         chip::decomposition::{
-            F_MS_LIMB, F_MS_LIMB_BITS, LIMB_BITS, LIMB_MASK, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
             column::{DecompositionCols, NUM_DECOMPOSITION_COLS},
+            F_MS_LIMB, F_MS_LIMB_BITS, LIMB_BITS, LIMB_MASK, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
         },
-        hash_sig::{MSG_HASH_FE_LEN, VerificationTrace},
+        hash_sig::{VerificationTrace, MSG_HASH_FE_LEN},
+        F,
     },
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };

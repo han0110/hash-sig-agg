@@ -1,8 +1,8 @@
 use crate::{
     poseidon2::{
-        F,
         chip::main::column::{MainCols, NUM_MAIN_COLS},
         hash_sig::VerificationTrace,
+        F,
     },
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
