@@ -5,7 +5,7 @@ use crate::poseidon2::{
 };
 use chain::ChainChip;
 use decomposition::DecompositionChip;
-use hash_sig::instantiation::poseidon2::encode_msg;
+use hash_sig_verifier::instantiation::poseidon2::encode_msg;
 use merkle_tree::MerkleTreeChip;
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},

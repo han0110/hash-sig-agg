@@ -1,8 +1,8 @@
 #![no_main]
 
-use hash_sig::{
+use hash_sig_verifier::{
     instantiation::{
-        poseidon2::{baby_bear_horizon::BabyBearHorizon, Poseidon2Instantiation, NUM_CHUNKS},
+        poseidon2::{baby_bear_horizon::BabyBearHorizon, Poseidon2TargetSum, NUM_CHUNKS},
         Instantiation,
     },
     VerificationInput,
@@ -16,7 +16,7 @@ sp1_zkvm::entrypoint!(main);
 // impl Poseidon2Parameter for Poseidon2BabyBearHorizon { ... }
 
 pub fn main() {
-    type I = Poseidon2Instantiation<BabyBearHorizon>;
+    type I = Poseidon2TargetSum<BabyBearHorizon>;
     let vi: VerificationInput<I, NUM_CHUNKS> = bincode::deserialize(&read_vec()).unwrap();
     let output = vi
         .pairs

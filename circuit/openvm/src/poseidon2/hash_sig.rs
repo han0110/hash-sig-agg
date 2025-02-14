@@ -1,13 +1,10 @@
 use crate::poseidon2::F;
 use core::array::from_fn;
-use hash_sig::{
+use hash_sig_verifier::{
     concat_array,
     instantiation::{
         self,
-        poseidon2::{
-            baby_bear_horizon::BabyBearHorizon, encode_tweak_chain, encode_tweak_merkle_tree,
-            encode_tweak_msg, msg_hash_to_chunks, Poseidon2Parameter,
-        },
+        poseidon2::{baby_bear_horizon::BabyBearHorizon, msg_hash_to_chunks, Poseidon2Parameter},
         Instantiation,
     },
 };
@@ -15,32 +12,31 @@ use num_bigint::BigUint;
 use openvm_stark_backend::p3_field::PrimeField32;
 use p3_maybe_rayon::prelude::*;
 
-pub use hash_sig::{
+pub use hash_sig_verifier::{
     instantiation::poseidon2::{
-        CHUNK_SIZE, HASH_FE_LEN, MSG_FE_LEN, MSG_HASH_FE_LEN, NUM_CHUNKS, PARAM_FE_LEN, RHO_FE_LEN,
-        SPONGE_CAPACITY, SPONGE_INPUT_SIZE, SPONGE_PERM, SPONGE_RATE, TWEAK_FE_LEN,
+        encode_msg, encode_tweak_chain, encode_tweak_merkle_tree, encode_tweak_msg, CHUNK_SIZE,
+        HASH_FE_LEN, MSG_FE_LEN, MSG_HASH_FE_LEN, NUM_CHUNKS, PARAM_FE_LEN, RHO_FE_LEN,
+        SPONGE_CAPACITY, SPONGE_INPUT_SIZE, SPONGE_PERM, SPONGE_RATE, TARGET_SUM, TWEAK_FE_LEN,
     },
     LOG_LIFETIME, MSG_LEN,
 };
 
-pub type Poseidon2Instantiation = instantiation::poseidon2::Poseidon2Instantiation<BabyBearHorizon>;
+pub type Poseidon2TargetSum = instantiation::poseidon2::Poseidon2TargetSum<BabyBearHorizon>;
 
-pub type Signature = hash_sig::Signature<
-    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Rho,
-    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Hash,
+pub type Signature = hash_sig_verifier::Signature<
+    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Rho,
+    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Hash,
     NUM_CHUNKS,
 >;
 
-pub type PublicKey = hash_sig::PublicKey<
-    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Parameter,
-    <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::Hash,
+pub type PublicKey = hash_sig_verifier::PublicKey<
+    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Parameter,
+    <Poseidon2TargetSum as Instantiation<NUM_CHUNKS>>::Hash,
 >;
 
-pub type VerificationInput = hash_sig::VerificationInput<Poseidon2Instantiation, NUM_CHUNKS>;
+pub type VerificationInput = hash_sig_verifier::VerificationInput<Poseidon2TargetSum, NUM_CHUNKS>;
 
 pub const MODULUS: u32 = F::ORDER_U32;
-
-pub const TARGET_SUM: u16 = <Poseidon2Instantiation as Instantiation<NUM_CHUNKS>>::TARGET_SUM;
 
 pub const SPONGE_CAPACITY_VALUES: [F; SPONGE_CAPACITY] = BabyBearHorizon::CAPACITY_VALUES;
 

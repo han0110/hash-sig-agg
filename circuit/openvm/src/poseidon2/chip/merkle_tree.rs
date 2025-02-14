@@ -2,12 +2,11 @@ use crate::poseidon2::{
     chip::merkle_tree::{
         air::MerkleTreeAir, column::NUM_MERKLE_TREE_COLS, generation::generate_trace_rows,
     },
-    hash_sig::{VerificationTrace, MSG_FE_LEN},
+    hash_sig::{encode_tweak_merkle_tree, encode_tweak_msg, VerificationTrace, MSG_FE_LEN},
     F,
 };
 use core::{any::type_name, iter};
 use generation::trace_height;
-use hash_sig::instantiation::poseidon2::{encode_tweak_merkle_tree, encode_tweak_msg};
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
     p3_commit::PolynomialSpace,

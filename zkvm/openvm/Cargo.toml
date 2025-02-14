@@ -1,10 +1,12 @@
 [workspace]
-members = ["keccak256", "poseidon2", "script"]
+members = ["keccak256", "poseidon2-baby-bear", "script"]
 resolver = "2"
 
 [workspace.dependencies]
 bincode = "1.3.3"
 clap = "4.5"
+hash-sig-testdata = { path = "../../hash-sig/hash-sig-testdata" }
+hash-sig-verifier = { path = "../../hash-sig/hash-sig-verifier" }
 openvm = { git = "https://github.com/openvm-org/openvm.git", features = ["std"] }
 openvm-build = { git = "https://github.com/openvm-org/openvm.git" }
 openvm-circuit = { git = "https://github.com/openvm-org/openvm.git" }
@@ -13,4 +15,3 @@ openvm-keccak256-guest = { git = "https://github.com/openvm-org/openvm.git" }
 openvm-sdk = { git = "https://github.com/openvm-org/openvm.git" }
 openvm-stark-sdk = { git = "https://github.com/openvm-org/stark-backend.git", tag = "v1.0.0-rc.0" }
 openvm-transpiler = { git = "https://github.com/openvm-org/openvm.git" }
-hash-sig = { path = "../../hash-sig" }

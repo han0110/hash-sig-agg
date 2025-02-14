@@ -1,9 +1,9 @@
 [package]
-name = "openvm-poseidon2"
+name = "hash-sig-agg-zkvm-openvm-poseidon2-baby-bear"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 bincode = { workspace = true }
-hash-sig = { workspace = true }
+hash-sig-verifier = { workspace = true }
 openvm = { workspace = true }

@@ -534,7 +534,41 @@ dependencies = [
 ]
 
 [[package]]
-name = "hash-sig"
+name = "hash-sig-agg-circuit-openvm"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-testdata",
+ "hash-sig-verifier",
+ "itertools 0.14.0",
+ "num-bigint 0.4.6",
+ "openvm-stark-backend",
+ "openvm-stark-sdk",
+ "p3-baby-bear",
+ "p3-dft",
+ "p3-fri",
+ "p3-maybe-rayon 0.1.0 (git+https://github.com/Plonky3//Plonky3.git)",
+ "p3-merkle-tree",
+ "p3-poseidon2",
+ "p3-poseidon2-air",
+ "p3-poseidon2-util",
+ "p3-symmetric",
+ "tracing-forest",
+ "tracing-subscriber",
+]
+
+[[package]]
+name = "hash-sig-testdata"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "rand",
+ "rayon",
+]
+
+[[package]]
+name = "hash-sig-verifier"
 version = "0.1.0"
 dependencies = [
  "num-bigint 0.4.6",
@@ -548,15 +582,6 @@ dependencies = [
  "serde",
  "serde-big-array",
  "sha3",
-]
-
-[[package]]
-name = "hash-sig-testdata"
-version = "0.1.0"
-dependencies = [
- "hash-sig",
- "rand",
- "rayon",
 ]
 
 [[package]]
@@ -845,30 +870,6 @@ name = "once_cell"
 version = "1.20.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "945462a4b81e43c4e3ba96bd7b49d834c6f61198356aa858733bc4acf3cbe62e"
-
-[[package]]
-name = "openvm"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hash-sig",
- "hash-sig-testdata",
- "itertools 0.14.0",
- "num-bigint 0.4.6",
- "openvm-stark-backend",
- "openvm-stark-sdk",
- "p3-baby-bear",
- "p3-dft",
- "p3-fri",
- "p3-maybe-rayon 0.1.0 (git+https://github.com/Plonky3//Plonky3.git)",
- "p3-merkle-tree",
- "p3-poseidon2",
- "p3-poseidon2-air",
- "p3-poseidon2-util",
- "p3-symmetric",
- "tracing-forest",
- "tracing-subscriber",
-]
 
 [[package]]
 name = "openvm-stark-backend"

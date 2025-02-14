@@ -1891,7 +1891,47 @@ dependencies = [
 ]
 
 [[package]]
-name = "hash-sig"
+name = "hash-sig-agg-zkvm-sp1-poseidon2-baby-bear"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "sp1-zkvm",
+]
+
+[[package]]
+name = "hash-sig-agg-zkvm-sp1-script"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "clap",
+ "hash-sig-testdata",
+ "hash-sig-verifier",
+ "sp1-helper",
+ "sp1-sdk",
+]
+
+[[package]]
+name = "hash-sig-agg-zkvm-sp1-sha3"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "sp1-zkvm",
+]
+
+[[package]]
+name = "hash-sig-testdata"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "rand",
+ "rayon",
+]
+
+[[package]]
+name = "hash-sig-verifier"
 version = "0.1.0"
 dependencies = [
  "num-bigint 0.4.6",
@@ -4523,15 +4563,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp1-poseidon2"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hash-sig",
- "sp1-zkvm",
-]
-
-[[package]]
 name = "sp1-primitives"
 version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4729,15 +4760,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sp1-script"
-version = "0.1.0"
-dependencies = [
- "clap",
- "sp1-helper",
- "sp1-sdk",
-]
-
-[[package]]
 name = "sp1-sdk"
 version = "4.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4782,15 +4804,6 @@ dependencies = [
  "tonic",
  "tracing",
  "twirp-rs",
-]
-
-[[package]]
-name = "sp1-sha3"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hash-sig",
- "sp1-zkvm",
 ]
 
 [[package]]

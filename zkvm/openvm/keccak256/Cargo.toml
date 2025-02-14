@@ -1,10 +1,10 @@
 [package]
-name = "openvm-keccak256"
+name = "hash-sig-agg-zkvm-openvm-keccak256"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
 bincode = { workspace = true }
-hash-sig = { workspace = true }
+hash-sig-verifier = { workspace = true }
 openvm = { workspace = true }
 openvm-keccak256-guest = { workspace = true }

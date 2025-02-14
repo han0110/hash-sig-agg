@@ -1527,7 +1527,51 @@ dependencies = [
 ]
 
 [[package]]
-name = "hash-sig"
+name = "hash-sig-agg-zkvm-openvm-keccak256"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "openvm",
+ "openvm-keccak256-guest",
+]
+
+[[package]]
+name = "hash-sig-agg-zkvm-openvm-poseidon2-baby-bear"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "openvm",
+]
+
+[[package]]
+name = "hash-sig-agg-zkvm-openvm-script"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "clap",
+ "hash-sig-testdata",
+ "hash-sig-verifier",
+ "openvm-build",
+ "openvm-circuit",
+ "openvm-sdk",
+ "openvm-stark-sdk",
+ "openvm-transpiler",
+]
+
+[[package]]
+name = "hash-sig-testdata"
+version = "0.1.0"
+dependencies = [
+ "bincode",
+ "hash-sig-verifier",
+ "rand",
+ "rayon",
+]
+
+[[package]]
+name = "hash-sig-verifier"
 version = "0.1.0"
 dependencies = [
  "num-bigint 0.4.6",
@@ -2432,16 +2476,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "openvm-keccak256"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hash-sig",
- "openvm",
- "openvm-keccak256-guest",
-]
-
-[[package]]
 name = "openvm-keccak256-circuit"
 version = "1.0.0-rc.1"
 source = "git+https://github.com/openvm-org/openvm.git#0f644600c21cc2a8b2a359ddad90a5670b11e866"
@@ -2691,15 +2725,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "openvm-poseidon2"
-version = "0.1.0"
-dependencies = [
- "bincode",
- "hash-sig",
- "openvm",
-]
-
-[[package]]
 name = "openvm-poseidon2-air"
 version = "1.0.0-rc.1"
 source = "git+https://github.com/openvm-org/openvm.git#0f644600c21cc2a8b2a359ddad90a5670b11e866"
@@ -2790,18 +2815,6 @@ dependencies = [
  "serde",
  "strum",
  "tracing",
-]
-
-[[package]]
-name = "openvm-script"
-version = "0.1.0"
-dependencies = [
- "clap",
- "openvm-build",
- "openvm-circuit",
- "openvm-sdk",
- "openvm-stark-sdk",
- "openvm-transpiler",
 ]
 
 [[package]]

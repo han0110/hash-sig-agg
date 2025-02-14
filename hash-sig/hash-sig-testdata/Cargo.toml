@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-hash-sig = { workspace = true }
+bincode = { workspace = true }
+hash-sig-verifier = { workspace = true }
 rand = { workspace = true }
 rayon = { workspace = true }

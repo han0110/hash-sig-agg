@@ -1,10 +1,13 @@
 [package]
-name = "openvm-script"
+name = "hash-sig-agg-zkvm-openvm-script"
 version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+bincode = { workspace = true }
 clap = { workspace = true, features = ["derive"] }
+hash-sig-testdata = { workspace = true }
+hash-sig-verifier = { workspace = true }
 openvm-build = { workspace = true }
 openvm-circuit = { workspace = true }
 openvm-sdk = { workspace = true }

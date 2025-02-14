@@ -1,5 +1,5 @@
 use core::array::from_fn;
-use hash_sig::{instantiation::Instantiation, PublicKey, Signature, VerificationInput};
+use hash_sig_verifier::{instantiation::Instantiation, PublicKey, Signature, VerificationInput};
 use rand::{random, thread_rng};
 use rayon::prelude::*;
 
@@ -24,8 +24,7 @@ pub fn mock_vi<I: Instantiation<NUM_CHUNKS>, const NUM_CHUNKS: usize>(
             (sig.rho, pk.merkle_root) = {
                 let (x, rho) = loop {
                     let rho = I::random_rho(&mut rng);
-                    let x = I::encode(epoch, msg, pk.parameter, rho);
-                    if x.iter().copied().sum::<u16>() == I::TARGET_SUM {
+                    if let Ok(x) = I::encode(epoch, msg, pk.parameter, rho) {
                         break (x, rho);
                     }
                 };

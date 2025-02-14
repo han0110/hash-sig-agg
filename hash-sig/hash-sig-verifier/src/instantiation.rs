@@ -6,7 +6,6 @@ use serde::{de::DeserializeOwned, Serialize};
 pub mod poseidon2;
 pub mod sha3;
 
-/// Target sum instantiation.
 pub trait Instantiation<const NUM_CHUNKS: usize> {
     type Parameter: Clone
         + Copy
@@ -36,8 +35,6 @@ pub trait Instantiation<const NUM_CHUNKS: usize> {
         + Serialize
         + DeserializeOwned;
 
-    const TARGET_SUM: u16 = (NUM_CHUNKS + NUM_CHUNKS.div_ceil(2)) as u16;
-
     fn random_parameter(rng: impl Rng) -> Self::Parameter;
 
     fn random_hash(rng: impl Rng) -> Self::Hash;
@@ -49,7 +46,7 @@ pub trait Instantiation<const NUM_CHUNKS: usize> {
         msg: [u8; MSG_LEN],
         parameter: Self::Parameter,
         rho: Self::Rho,
-    ) -> [u16; NUM_CHUNKS];
+    ) -> Result<[u16; NUM_CHUNKS], String>;
 
     fn chain(
         epoch: u32,
@@ -72,10 +69,7 @@ pub trait Instantiation<const NUM_CHUNKS: usize> {
         pk: PublicKey<Self::Parameter, Self::Hash>,
         sig: Signature<Self::Rho, Self::Hash, NUM_CHUNKS>,
     ) -> Result<(), String> {
-        let x = Self::encode(epoch, msg, pk.parameter, sig.rho);
-        if x.iter().sum::<u16>() != Self::TARGET_SUM {
-            return Err("Unmatched target sum".to_string());
-        }
+        let x = Self::encode(epoch, msg, pk.parameter, sig.rho)?;
         let one_time_pk =
             from_fn(|i| Self::chain(epoch, pk.parameter, i as _, x[i], sig.one_time_sig[i]));
         if Self::merkle_root(epoch, pk.parameter, one_time_pk, sig.merkle_siblings)

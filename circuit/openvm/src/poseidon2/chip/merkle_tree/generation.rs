@@ -6,8 +6,8 @@ use crate::{
         },
         concat_array,
         hash_sig::{
-            VerificationTrace, CHUNK_SIZE, HASH_FE_LEN, LOG_LIFETIME, MSG_FE_LEN,
-            SPONGE_CAPACITY_VALUES, SPONGE_PERM, SPONGE_RATE,
+            encode_tweak_merkle_tree, VerificationTrace, CHUNK_SIZE, HASH_FE_LEN, LOG_LIFETIME,
+            MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_PERM, SPONGE_RATE,
         },
         GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -19,7 +19,6 @@ use core::{
     iter::{self, zip},
     mem::MaybeUninit,
 };
-use hash_sig::instantiation::poseidon2::encode_tweak_merkle_tree;
 use openvm_stark_backend::{
     p3_field::FieldAlgebra,
     p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
