@@ -14,7 +14,8 @@ use core::{
     borrow::{Borrow, BorrowMut},
     slice,
 };
-use openvm_stark_backend::{p3_air::AirBuilder, p3_field::FieldAlgebra};
+use p3_air::AirBuilder;
+use p3_field::FieldAlgebra;
 use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_CHAIN_COLS: usize = size_of::<ChainCols<u8>>();

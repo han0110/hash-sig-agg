@@ -7,11 +7,11 @@ use core::any::type_name;
 use generation::{generate_trace_rows, trace_height};
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
-    p3_commit::PolynomialSpace,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
     Chip, ChipUsageGetter,
 };
+use p3_commit::PolynomialSpace;
 use std::sync::Arc;
 
 mod air;

@@ -1,7 +1,7 @@
 use crate::{
     gadget::{cycle_int::CycleInt, not},
     poseidon2::{
-        chip::merkle_tree::{PARTIAL_ROUNDS, WIDTH},
+        chip::merkle_tree::poseidon2::{PARTIAL_ROUNDS, WIDTH},
         hash_sig::{
             HASH_FE_LEN, LOG_LIFETIME, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN, SPONGE_PERM,
             SPONGE_RATE, TWEAK_FE_LEN,

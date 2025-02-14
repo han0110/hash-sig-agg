@@ -2,28 +2,24 @@ use crate::{
     poseidon2::{
         chip::merkle_tree::{
             column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
-            PARTIAL_ROUNDS, WIDTH,
+            poseidon2::{PARTIAL_ROUNDS, WIDTH},
         },
-        concat_array,
         hash_sig::{
             encode_tweak_merkle_tree, VerificationTrace, CHUNK_SIZE, HASH_FE_LEN, LOG_LIFETIME,
             MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_PERM, SPONGE_RATE,
         },
-        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
-        SBOX_REGISTERS,
+        Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE, SBOX_REGISTERS,
     },
-    util::{MaybeUninitField, MaybeUninitFieldSlice},
+    util::{concat_array, MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::{
     array::from_fn,
     iter::{self, zip},
     mem::MaybeUninit,
 };
-use openvm_stark_backend::{
-    p3_field::FieldAlgebra,
-    p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
-    p3_maybe_rayon::prelude::*,
-};
+use p3_field::FieldAlgebra;
+use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
+use p3_maybe_rayon::prelude::*;
 use p3_poseidon2_util::air::{generate_trace_rows_for_perm, outputs};
 
 const NUM_ROWS_PER_SIG: usize = 1 + SPONGE_PERM + LOG_LIFETIME;
@@ -102,7 +98,7 @@ fn generate_trace_row_msg(
     let input = trace.msg_hash_preimage(epoch, encoded_msg);
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+        Poseidon2LinearLayers<WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -163,7 +159,7 @@ fn generate_trace_rows_leaf(
             row.is_right.write_zero();
             generate_trace_rows_for_perm::<
                 F,
-                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+                Poseidon2LinearLayers<WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -219,7 +215,7 @@ fn generate_trace_rows_path(
             ];
             generate_trace_rows_for_perm::<
                 F,
-                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+                Poseidon2LinearLayers<WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -261,7 +257,7 @@ pub fn generate_trace_row_padding(row: &mut MerkleTreeCols<MaybeUninit<F>>) {
     row.is_right.write_zero();
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+        Poseidon2LinearLayers<WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,

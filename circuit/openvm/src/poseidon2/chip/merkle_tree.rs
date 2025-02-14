@@ -9,20 +9,22 @@ use core::{any::type_name, iter};
 use generation::trace_height;
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
-    p3_commit::PolynomialSpace,
-    p3_field::FieldAlgebra,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
     Chip, ChipUsageGetter,
 };
+use p3_commit::PolynomialSpace;
+use p3_field::FieldAlgebra;
 use std::sync::Arc;
 
 mod air;
 mod column;
 mod generation;
 
-const WIDTH: usize = 24;
-const PARTIAL_ROUNDS: usize = 21;
+mod poseidon2 {
+    pub const WIDTH: usize = 24;
+    pub const PARTIAL_ROUNDS: usize = crate::poseidon2::partial_round::<WIDTH>();
+}
 
 #[derive(Clone, Debug)]
 pub struct MerkleTreeChip<'a> {

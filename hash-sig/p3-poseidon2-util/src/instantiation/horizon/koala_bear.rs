@@ -1,5 +1,5 @@
 use crate::instantiation::horizon::{
-    koala_bear::constant::*, GenericPoseidon2ExternalLayer, GenericPoseidon2InternalLayer,
+    koala_bear::constant::*, Poseidon2ExternalLayerHorizon, Poseidon2InternalLayerHorizon,
 };
 use p3_field::Field;
 use p3_koala_bear::KoalaBear;
@@ -10,8 +10,8 @@ pub mod constant;
 
 pub type Poseidon2KoalaBearHorizon<const WIDTH: usize> = Poseidon2<
     <KoalaBear as Field>::Packing,
-    GenericPoseidon2ExternalLayer<KoalaBear, WIDTH, SBOX_DEGREE>,
-    GenericPoseidon2InternalLayer<KoalaBear, WIDTH, SBOX_DEGREE>,
+    Poseidon2ExternalLayerHorizon<KoalaBear, WIDTH, SBOX_DEGREE>,
+    Poseidon2InternalLayerHorizon<KoalaBear, WIDTH, SBOX_DEGREE>,
     WIDTH,
     SBOX_DEGREE,
 >;

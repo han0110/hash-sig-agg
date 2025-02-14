@@ -1,16 +1,12 @@
 use openvm_stark_backend::{
-    config::StarkConfig,
-    engine::VerificationData,
-    interaction::fri_log_up::FriLogUpPhase,
-    p3_challenger::{HashChallenger, SerializingChallenger32},
-    p3_commit::ExtensionMmcs,
-    p3_field::{ExtensionField, PrimeField32, TwoAdicField},
-    prover::types::AirProofInput,
-    verifier::VerificationError,
-    AirRef,
+    config::StarkConfig, engine::VerificationData, interaction::fri_log_up::FriLogUpPhase,
+    prover::types::AirProofInput, verifier::VerificationError, AirRef,
 };
 use openvm_stark_sdk::{engine::StarkEngine, p3_keccak::Keccak256Hash};
+use p3_challenger::{HashChallenger, SerializingChallenger32};
+use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
+use p3_field::{ExtensionField, PrimeField32, TwoAdicField};
 use p3_fri::{FriConfig, TwoAdicFriPcs};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};

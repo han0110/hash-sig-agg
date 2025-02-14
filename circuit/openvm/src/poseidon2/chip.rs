@@ -9,11 +9,11 @@ use hash_sig_verifier::instantiation::poseidon2::encode_msg;
 use merkle_tree::MerkleTreeChip;
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
-    p3_commit::PolynomialSpace,
-    p3_maybe_rayon::prelude::*,
     prover::types::AirProofInput,
     AirRef, Chip,
 };
+use p3_commit::PolynomialSpace;
+use p3_maybe_rayon::prelude::*;
 use range_check::RangeCheckChip;
 
 pub mod chain;
@@ -85,12 +85,9 @@ where
 #[cfg(test)]
 mod test {
     use crate::{
-        poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::mock_vi, F},
+        poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::mock_vi, E, F},
         test::run,
     };
-    use openvm_stark_backend::p3_field::extension::BinomialExtensionField;
-
-    type E = BinomialExtensionField<F, 4>;
 
     #[test]
     fn chip() {

@@ -541,17 +541,23 @@ dependencies = [
  "hash-sig-testdata",
  "hash-sig-verifier",
  "itertools 0.14.0",
- "num-bigint 0.4.6",
  "openvm-stark-backend",
  "openvm-stark-sdk",
+ "p3-air",
  "p3-baby-bear",
+ "p3-challenger",
+ "p3-commit",
  "p3-dft",
+ "p3-field",
  "p3-fri",
+ "p3-koala-bear",
+ "p3-matrix",
  "p3-maybe-rayon 0.1.0 (git+https://github.com/Plonky3//Plonky3.git)",
  "p3-merkle-tree",
  "p3-poseidon2",
  "p3-poseidon2-air",
  "p3-poseidon2-util",
+ "p3-sha256",
  "p3-symmetric",
  "tracing-forest",
  "tracing-subscriber",
@@ -962,7 +968,7 @@ source = "git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9#b0591e9b82d58d
 dependencies = [
  "p3-field",
  "p3-mds",
- "p3-monty-31 0.1.0 (git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9)",
+ "p3-monty-31",
  "p3-poseidon2",
  "p3-symmetric",
  "rand",
@@ -1112,11 +1118,11 @@ dependencies = [
 [[package]]
 name = "p3-koala-bear"
 version = "0.1.0"
-source = "git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
+source = "git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
 dependencies = [
  "p3-field",
  "p3-mds",
- "p3-monty-31 0.1.0 (git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9)",
+ "p3-monty-31",
  "p3-poseidon2",
  "p3-symmetric",
  "rand",
@@ -1149,7 +1155,7 @@ dependencies = [
 [[package]]
 name = "p3-maybe-rayon"
 version = "0.1.0"
-source = "git+https://github.com/Plonky3//Plonky3.git#3d33ebe6e9431df98658f004bd7011ad40a8948a"
+source = "git+https://github.com/Plonky3//Plonky3.git#f91c76545cf5c4ae9182897bcc557715817bcbdc"
 dependencies = [
  "rayon",
 ]
@@ -1207,27 +1213,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "p3-monty-31"
-version = "0.1.0"
-source = "git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
-dependencies = [
- "itertools 0.13.0",
- "num-bigint 0.4.6",
- "p3-dft",
- "p3-field",
- "p3-matrix",
- "p3-maybe-rayon 0.1.0 (git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9)",
- "p3-mds",
- "p3-poseidon2",
- "p3-symmetric",
- "p3-util 0.1.0 (git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9)",
- "rand",
- "serde",
- "tracing",
- "transpose",
-]
-
-[[package]]
 name = "p3-poseidon"
 version = "0.1.0"
 source = "git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
@@ -1275,6 +1260,16 @@ dependencies = [
  "p3-koala-bear",
  "p3-poseidon2",
  "p3-poseidon2-air",
+]
+
+[[package]]
+name = "p3-sha256"
+version = "0.1.0"
+source = "git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
+dependencies = [
+ "p3-symmetric",
+ "p3-util 0.1.0 (git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9)",
+ "sha2",
 ]
 
 [[package]]

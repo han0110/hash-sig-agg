@@ -7,11 +7,11 @@ use core::any::type_name;
 use generation::{generate_trace_rows, trace_height};
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
-    p3_commit::PolynomialSpace,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
     Chip, ChipUsageGetter,
 };
+use p3_commit::PolynomialSpace;
 use std::sync::Arc;
 
 const MAX_CHAIN_STEP_DIFF_BITS: usize = (NUM_CHUNKS / 2).next_power_of_two().ilog2() as usize;
@@ -22,7 +22,7 @@ mod generation;
 
 mod poseidon2 {
     pub const WIDTH: usize = 16;
-    pub const PARTIAL_ROUNDS: usize = 13;
+    pub const PARTIAL_ROUNDS: usize = crate::poseidon2::partial_round::<WIDTH>();
 }
 
 #[derive(Clone, Debug)]

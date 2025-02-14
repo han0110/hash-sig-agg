@@ -3,10 +3,8 @@ use crate::{
     util::MaybeUninitField,
 };
 use core::mem::MaybeUninit;
-use openvm_stark_backend::{
-    p3_air::AirBuilder,
-    p3_field::{Field, FieldAlgebra},
-};
+use p3_air::AirBuilder;
+use p3_field::{Field, FieldAlgebra};
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]

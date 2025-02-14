@@ -1,11 +1,14 @@
-use core::{iter::zip, marker::PhantomData, ops::Mul};
+use core::{
+    iter::zip,
+    marker::PhantomData,
+    ops::{AddAssign, Mul},
+};
 use p3_field::FieldAlgebra;
 use p3_poseidon2::{
     add_rc_and_sbox_generic, external_initial_permute_state, external_terminal_permute_state,
     mds_light_permutation, ExternalLayer, ExternalLayerConstants, ExternalLayerConstructor,
     GenericPoseidon2LinearLayers, HLMDSMat4, InternalLayer, InternalLayerConstructor,
 };
-use std::ops::AddAssign;
 
 pub mod baby_bear;
 pub mod koala_bear;
@@ -15,13 +18,13 @@ pub trait MatDiagMinusOne<const WIDTH: usize>: Sized {
 }
 
 #[derive(Clone, Debug)]
-pub struct GenericPoseidon2ExternalLayer<F, const WIDTH: usize, const SBOX_DEGREE: u64>(
+pub struct Poseidon2ExternalLayerHorizon<F, const WIDTH: usize, const SBOX_DEGREE: u64>(
     Vec<[F; WIDTH]>,
     Vec<[F; WIDTH]>,
 );
 
 impl<F: Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    ExternalLayerConstructor<FA, WIDTH> for GenericPoseidon2ExternalLayer<F, WIDTH, SBOX_DEGREE>
+    ExternalLayerConstructor<FA, WIDTH> for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
     fn new_from_constants(external_constants: ExternalLayerConstants<FA::F, WIDTH>) -> Self {
         let initial = external_constants.get_initial_constants().clone();
@@ -31,7 +34,7 @@ impl<F: Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u6
 }
 
 impl<F: Sync + Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    ExternalLayer<FA, WIDTH, SBOX_DEGREE> for GenericPoseidon2ExternalLayer<F, WIDTH, SBOX_DEGREE>
+    ExternalLayer<FA, WIDTH, SBOX_DEGREE> for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
     fn permute_state_initial(&self, state: &mut [FA; WIDTH]) {
         external_initial_permute_state(
@@ -53,10 +56,10 @@ impl<F: Sync + Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEG
 }
 
 #[derive(Clone, Debug)]
-pub struct GenericPoseidon2InternalLayer<F, const WIDTH: usize, const SBOX_DEGREE: u64>(Vec<F>);
+pub struct Poseidon2InternalLayerHorizon<F, const WIDTH: usize, const SBOX_DEGREE: u64>(Vec<F>);
 
 impl<F, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    InternalLayerConstructor<FA> for GenericPoseidon2InternalLayer<F, WIDTH, SBOX_DEGREE>
+    InternalLayerConstructor<FA> for Poseidon2InternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
     fn new_from_constants(internal_constants: Vec<FA::F>) -> Self {
         Self(internal_constants)
@@ -64,7 +67,7 @@ impl<F, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
 }
 
 impl<F: Sync + Copy, FA, const WIDTH: usize, const SBOX_DEGREE: u64>
-    InternalLayer<FA, WIDTH, SBOX_DEGREE> for GenericPoseidon2InternalLayer<F, WIDTH, SBOX_DEGREE>
+    InternalLayer<FA, WIDTH, SBOX_DEGREE> for Poseidon2InternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 where
     F: MatDiagMinusOne<WIDTH>,
     FA: FieldAlgebra<F = F> + AddAssign<F> + Mul<F, Output = FA>,
@@ -82,10 +85,10 @@ where
 }
 
 #[derive(Clone, Debug)]
-pub struct GenericPoseidon2LinearLayersHorizon<F, const WIDTH: usize>(PhantomData<F>);
+pub struct Poseidon2LinearLayersHorizon<F, const WIDTH: usize>(PhantomData<F>);
 
 impl<F: Sync + Copy + MatDiagMinusOne<WIDTH>, FA, const WIDTH: usize>
-    GenericPoseidon2LinearLayers<FA, WIDTH> for GenericPoseidon2LinearLayersHorizon<F, WIDTH>
+    GenericPoseidon2LinearLayers<FA, WIDTH> for Poseidon2LinearLayersHorizon<F, WIDTH>
 where
     FA: FieldAlgebra<F = F> + Mul<F, Output = FA>,
 {

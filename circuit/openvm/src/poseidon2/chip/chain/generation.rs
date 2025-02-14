@@ -6,18 +6,15 @@ use crate::{
             MAX_CHAIN_STEP_DIFF_BITS,
         },
         hash_sig::{VerificationTrace, CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
-        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE,
-        SBOX_REGISTERS,
+        Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::{iter::zip, mem::MaybeUninit};
 use itertools::Itertools;
-use openvm_stark_backend::{
-    p3_field::{Field, FieldAlgebra},
-    p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
-    p3_maybe_rayon::prelude::*,
-};
+use p3_field::{Field, FieldAlgebra};
+use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
+use p3_maybe_rayon::prelude::*;
 use p3_poseidon2_util::air::generate_trace_rows_for_perm;
 
 const MAX_X_I: u32 = (1 << CHUNK_SIZE) - 1;
@@ -74,7 +71,7 @@ pub fn generate_trace_rows_sig(
             row.sig_step.populate(sig_step);
             generate_trace_rows_for_perm::<
                 F,
-                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+                Poseidon2LinearLayers<WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,
@@ -140,7 +137,7 @@ pub fn generate_trace_row_padding(row: &mut ChainCols<MaybeUninit<F>>) {
     row.sum.write_zero();
     generate_trace_rows_for_perm::<
         F,
-        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+        Poseidon2LinearLayers<WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,

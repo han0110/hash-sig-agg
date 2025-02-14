@@ -9,10 +9,8 @@ use crate::{
     util::MaybeUninitField,
 };
 use core::mem::MaybeUninit;
-use openvm_stark_backend::{
-    p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
-    p3_maybe_rayon::prelude::*,
-};
+use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
+use p3_maybe_rayon::prelude::*;
 
 pub const fn trace_height() -> usize {
     1 << LIMB_BITS

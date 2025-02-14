@@ -4,13 +4,12 @@ use crate::{
         chip::{
             merkle_tree::{
                 column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
-                PARTIAL_ROUNDS, WIDTH,
+                poseidon2::{PARTIAL_ROUNDS, WIDTH},
             },
             Bus,
         },
         hash_sig::{HASH_FE_LEN, MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE, TWEAK_FE_LEN},
-        GenericPoseidon2LinearLayersHorizon, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE,
-        SBOX_REGISTERS,
+        Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE, SBOX_REGISTERS,
     },
 };
 use core::{
@@ -21,18 +20,18 @@ use core::{
 use openvm_stark_backend::{
     air_builders::sub::SubAirBuilder,
     interaction::InteractionBuilder,
-    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
-    p3_field::FieldAlgebra,
-    p3_matrix::Matrix,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
 };
+use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
+use p3_field::FieldAlgebra;
+use p3_matrix::Matrix;
 use p3_poseidon2_air::{num_cols, Poseidon2Air};
 
 #[derive(Debug)]
 pub struct MerkleTreeAir(
     Poseidon2Air<
         F,
-        GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+        Poseidon2LinearLayers<WIDTH>,
         WIDTH,
         SBOX_DEGREE,
         SBOX_REGISTERS,
@@ -71,7 +70,7 @@ where
             _,
             Poseidon2Air<
                 F,
-                GenericPoseidon2LinearLayersHorizon<F, WIDTH>,
+                Poseidon2LinearLayers<WIDTH>,
                 WIDTH,
                 SBOX_DEGREE,
                 SBOX_REGISTERS,

@@ -1,5 +1,5 @@
 use crate::instantiation::horizon::{
-    baby_bear::constant::*, GenericPoseidon2ExternalLayer, GenericPoseidon2InternalLayer,
+    baby_bear::constant::*, Poseidon2ExternalLayerHorizon, Poseidon2InternalLayerHorizon,
 };
 use p3_baby_bear::BabyBear;
 use p3_field::Field;
@@ -10,8 +10,8 @@ pub mod constant;
 
 pub type Poseidon2BabyBearHorizon<const WIDTH: usize> = Poseidon2<
     <BabyBear as Field>::Packing,
-    GenericPoseidon2ExternalLayer<BabyBear, WIDTH, SBOX_DEGREE>,
-    GenericPoseidon2InternalLayer<BabyBear, WIDTH, SBOX_DEGREE>,
+    Poseidon2ExternalLayerHorizon<BabyBear, WIDTH, SBOX_DEGREE>,
+    Poseidon2InternalLayerHorizon<BabyBear, WIDTH, SBOX_DEGREE>,
     WIDTH,
     SBOX_DEGREE,
 >;

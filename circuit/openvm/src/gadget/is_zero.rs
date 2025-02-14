@@ -1,5 +1,6 @@
 use core::mem::MaybeUninit;
-use openvm_stark_backend::{p3_air::AirBuilder, p3_field::Field};
+use p3_air::AirBuilder;
+use p3_field::Field;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, Default)]

@@ -7,10 +7,8 @@ use crate::{
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::mem::MaybeUninit;
-use openvm_stark_backend::{
-    p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
-    p3_maybe_rayon::prelude::*,
-};
+use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
+use p3_maybe_rayon::prelude::*;
 
 pub const fn trace_height(traces: &[VerificationTrace]) -> usize {
     traces.len().next_power_of_two()

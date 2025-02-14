@@ -1,14 +1,13 @@
-use crate::poseidon2::F;
+use crate::poseidon2::{Poseidon2Parameter, F};
 use core::array::from_fn;
 use hash_sig_verifier::{
     concat_array,
     instantiation::{
         self,
-        poseidon2::{baby_bear_horizon::BabyBearHorizon, msg_hash_to_chunks, Poseidon2Parameter},
+        poseidon2::{msg_hash_to_chunks, Poseidon2Parameter as _},
     },
 };
-use num_bigint::BigUint;
-use openvm_stark_backend::p3_field::PrimeField32;
+use p3_field::PrimeField32;
 use p3_maybe_rayon::prelude::*;
 
 pub use hash_sig_verifier::{
@@ -20,7 +19,7 @@ pub use hash_sig_verifier::{
     LOG_LIFETIME, MSG_LEN,
 };
 
-pub type Poseidon2TargetSum = instantiation::poseidon2::Poseidon2TargetSum<BabyBearHorizon>;
+pub type Poseidon2TargetSum = instantiation::poseidon2::Poseidon2TargetSum<Poseidon2Parameter>;
 
 pub type Signature = hash_sig_verifier::Signature<Poseidon2TargetSum, NUM_CHUNKS>;
 
@@ -30,7 +29,7 @@ pub type VerificationInput = hash_sig_verifier::VerificationInput<Poseidon2Targe
 
 pub const MODULUS: u32 = F::ORDER_U32;
 
-pub const SPONGE_CAPACITY_VALUES: [F; SPONGE_CAPACITY] = BabyBearHorizon::CAPACITY_VALUES;
+pub const SPONGE_CAPACITY_VALUES: [F; SPONGE_CAPACITY] = Poseidon2Parameter::CAPACITY_VALUES;
 
 #[derive(Clone, Copy, Debug)]
 pub struct VerificationTrace {
@@ -49,7 +48,7 @@ impl VerificationTrace {
         pk: PublicKey,
         sig: Signature,
     ) -> Self {
-        let msg_hash = BabyBearHorizon::compress_t24::<24, MSG_HASH_FE_LEN>(concat_array![
+        let msg_hash = Poseidon2Parameter::compress_t24::<24, MSG_HASH_FE_LEN>(concat_array![
             sig.rho,
             pk.parameter,
             encode_tweak_msg(epoch),
@@ -85,21 +84,6 @@ impl VerificationTrace {
         ]
     }
 
-    pub fn msg_hash_limbs(&self, limb_bits: usize) -> impl Iterator<Item = u32> {
-        let mask = (1 << limb_bits) - 1;
-        let mut big = self
-            .msg_hash
-            .into_iter()
-            .fold(BigUint::ZERO, |acc, v| acc * MODULUS + v.as_canonical_u32());
-        (0..(MSG_HASH_FE_LEN * F::ORDER_U32.next_power_of_two().ilog2() as usize)
-            .div_ceil(limb_bits))
-            .map(move |_| {
-                let limb = big.iter_u32_digits().next().unwrap() & mask;
-                big >>= limb_bits;
-                limb
-            })
-    }
-
     pub fn merkle_tree_leaf(&self, epoch: u32) -> [F; SPONGE_INPUT_SIZE] {
         concat_array![
             self.pk.parameter,
@@ -120,7 +104,7 @@ pub fn chain_and_input(
         let input = concat_array![parameter, encode_tweak_chain(epoch, i, k), value];
         inputs.push(input);
         (
-            BabyBearHorizon::compress_t16::<16, HASH_FE_LEN>(input),
+            Poseidon2Parameter::compress_t16::<16, HASH_FE_LEN>(input),
             inputs,
         )
     })

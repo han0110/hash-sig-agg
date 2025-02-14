@@ -5,8 +5,16 @@ pub const SBOX_DEGREE: u64 = 3;
 
 pub const HALF_FULL_ROUNDS: usize = 4;
 
+pub const fn partial_round<const WIDTH: usize>() -> usize {
+    match WIDTH {
+        16 => 20,
+        24 => 23,
+        _ => unimplemented!(),
+    }
+}
+
 #[rustfmt::skip]
-pub const RC16: RoundConstants<KoalaBear, 16, 4, 20> = RoundConstants { 
+pub const RC16: RoundConstants<KoalaBear, 16, HALF_FULL_ROUNDS, { partial_round::<16>() }> = RoundConstants { 
     beginning_full_round_constants: KoalaBear::new_2d_array([
         [0x7ee56a48, 0x11367045, 0x12e41941, 0x7ebbc12b, 0x1970b7d5, 0x662b60e8, 0x3e4990c6, 0x679f91f5, 0x350813bb, 0x00874ad4, 0x28a0081a, 0x18fa5872, 0x5f25b071, 0x5e5d5998, 0x5e6fd3e7, 0x5b2e2660],
         [0x6f1837bf, 0x3fe6182b, 0x1edd7ac5, 0x57470d00, 0x43d486d5, 0x1982c70f, 0x0ea53af9, 0x61d6165b, 0x51639c00, 0x2dec352c, 0x2950e531, 0x2d2cb947, 0x08256cef, 0x1a0109f6, 0x1f51faf3, 0x5cef1c62],
@@ -23,7 +31,7 @@ pub const RC16: RoundConstants<KoalaBear, 16, 4, 20> = RoundConstants {
 };
 
 #[rustfmt::skip]
-pub const RC24: RoundConstants<KoalaBear, 24, 4, 23> = RoundConstants { 
+pub const RC24: RoundConstants<KoalaBear, 24, HALF_FULL_ROUNDS, { partial_round::<24>() }> = RoundConstants { 
     beginning_full_round_constants: KoalaBear::new_2d_array([
         [0x1d0939dc, 0x6d050f8d, 0x628058ad, 0x2681385d, 0x3e3c62be, 0x032cfad8, 0x5a91ba3c, 0x015a56e6, 0x696b889c, 0x0dbcd780, 0x5881b5c9, 0x2a076f2e, 0x55393055, 0x6513a085, 0x547ac78f, 0x4281c5b8, 0x3e7a3f6c, 0x34562c19, 0x2c04e679, 0x0ed78234, 0x5f7a1aa9, 0x0177640e, 0x0ea4f8d1, 0x15be7692],
         [0x6eafdd62, 0x71a572c6, 0x72416f0a, 0x31ce1ad3, 0x2136a0cf, 0x1507c0eb, 0x1eb6e07a, 0x3a0ccf7b, 0x38e4bf31, 0x44128286, 0x6b05e976, 0x244a9b92, 0x6e4b32a8, 0x78ee2496, 0x4761115b, 0x3d3a7077, 0x75d3c670, 0x396a2475, 0x26dd00b4, 0x7df50f59, 0x0cb922df, 0x0568b190, 0x5bd3fcd6, 0x1351f58e],

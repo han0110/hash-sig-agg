@@ -4,7 +4,8 @@ use crate::{
         chip::{
             decomposition::{
                 column::{DecompositionCols, NUM_DECOMPOSITION_COLS},
-                F_MS_LIMB, LIMB_BITS, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
+                F_MS_LIMB, F_MS_LIMB_LEADING_ONES, F_MS_LIMB_TRAILING_ZEROS, LIMB_BITS, NUM_LIMBS,
+                NUM_MSG_HASH_LIMBS,
             },
             Bus,
         },
@@ -18,11 +19,11 @@ use core::{
 };
 use openvm_stark_backend::{
     interaction::InteractionBuilder,
-    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
-    p3_field::FieldAlgebra,
-    p3_matrix::Matrix,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
 };
+use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
+use p3_field::FieldAlgebra;
+use p3_matrix::Matrix;
 
 #[derive(Clone, Copy, Debug)]
 pub struct DecompositionAir;
@@ -85,60 +86,54 @@ where
 {
     cols.inds.eval_every_row(builder);
 
-    const { assert!(F_MS_LIMB == 0b111_1000) };
     cols.value_ms_limb_bits
         .iter()
         .for_each(|cell| builder.assert_bool(*cell));
-    builder.assert_eq(
-        cols.value_ms_limb_auxs[0],
-        cols.value_ms_limb_bits[6] * cols.value_ms_limb_bits[5] * cols.value_ms_limb_bits[4],
-    );
-    builder.assert_eq(
-        cols.value_ms_limb_auxs[1],
-        cols.value_ms_limb_bits[3]
-            * not(cols.value_ms_limb_bits[2].into())
-            * not(cols.value_ms_limb_bits[1].into()),
-    );
-    builder.assert_eq(
-        cols.value_ms_limb_auxs[2],
-        cols.value_ms_limb_auxs[0]
-            * cols.value_ms_limb_auxs[1]
-            * not(cols.value_ms_limb_bits[0].into()),
+    cols.is_ms_limb_max.eval(
+        builder,
+        cols.value_ms_limb_bits[F_MS_LIMB_TRAILING_ZEROS as usize..]
+            .iter()
+            .copied()
+            .map(Into::into)
+            .sum::<AB::Expr>(),
+        AB::Expr::from_canonical_u32(F_MS_LIMB_LEADING_ONES),
     );
     cols.value_limb_0_is_zero
         .eval(builder, cols.value_ls_limbs[0]);
     cols.value_limb_1_is_zero
         .eval(builder, cols.value_ls_limbs[1]);
+
     // MSL <= F_MS_LIMB
-    builder
-        .when(cols.value_ms_limb_auxs[0].into() * cols.value_ms_limb_bits[3].into())
-        .assert_zero(
-            cols.value_ms_limb_bits[0..3]
+    if F_MS_LIMB_TRAILING_ZEROS != 0 {
+        builder.when(cols.is_ms_limb_max.output.into()).assert_zero(
+            cols.value_ms_limb_bits[..F_MS_LIMB_TRAILING_ZEROS as usize]
                 .iter()
                 .copied()
                 .map(Into::into)
                 .sum::<AB::Expr>(),
         );
-    // When MSL == 31, second most significant limb should be 0.
-    builder
-        .when(cols.value_ms_limb_auxs[2].into())
-        .assert_one(cols.value_limb_1_is_zero.output);
-    // When MSL == 31 and second most significant limb == 0, LSL should be 0.
-    builder
-        .when(cols.value_ms_limb_auxs[2].into() * cols.value_limb_1_is_zero.output.into())
-        .assert_one(cols.value_limb_0_is_zero.output);
+    }
+    // When MSL == F_MS_LIMB, least significant limbs should be 0.
+    for v in [
+        cols.value_limb_0_is_zero.output,
+        cols.value_limb_1_is_zero.output,
+    ] {
+        builder.when(cols.is_ms_limb_max.output).assert_one(v);
+    }
 
+    let value_composed = cols
+        .value_ls_limbs
+        .iter()
+        .copied()
+        .map(Into::into)
+        .chain([cols.value_ms_limb::<AB>()])
+        .enumerate()
+        .map(|(idx, limb)| limb * F::from_canonical_u32(1 << (idx * LIMB_BITS)))
+        .sum::<AB::Expr>();
     (0..MSG_HASH_FE_LEN).for_each(|idx| {
         builder.when(cols.inds[idx]).assert_eq(
             cols.values[MSG_HASH_FE_LEN - 1 - idx],
-            cols.value_ls_limbs
-                .iter()
-                .copied()
-                .map(Into::into)
-                .chain([cols.value_ms_limb::<AB>()])
-                .enumerate()
-                .map(|(idx, limb)| limb * F::from_canonical_u32(1 << (idx * LIMB_BITS)))
-                .sum::<AB::Expr>(),
+            value_composed.clone(),
         );
     });
 }

@@ -1,4 +1,4 @@
-use openvm_stark_backend::p3_field::FieldAlgebra;
+use p3_field::FieldAlgebra;
 
 pub mod cycle_bits;
 pub mod cycle_int;

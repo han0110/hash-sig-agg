@@ -2,7 +2,8 @@ use crate::{
     poseidon2::{
         chip::decomposition::{
             column::{DecompositionCols, NUM_DECOMPOSITION_COLS},
-            F_MS_LIMB, F_MS_LIMB_BITS, LIMB_BITS, LIMB_MASK, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
+            F_MS_LIMB, F_MS_LIMB_BITS, F_MS_LIMB_LEADING_ONES, F_MS_LIMB_TRAILING_ZEROS, LIMB_BITS,
+            LIMB_MASK, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
         },
         hash_sig::{VerificationTrace, MSG_HASH_FE_LEN},
         F,
@@ -10,11 +11,9 @@ use crate::{
     util::{MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::{array::from_fn, iter::repeat_with, mem::MaybeUninit};
-use openvm_stark_backend::{
-    p3_field::{FieldAlgebra, PrimeField32},
-    p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut},
-    p3_maybe_rayon::prelude::*,
-};
+use p3_field::{FieldAlgebra, PrimeField32};
+use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
+use p3_maybe_rayon::prelude::*;
 use std::sync::atomic::{AtomicU32, Ordering};
 
 const NUM_ROWS_PER_SIG: usize = MSG_HASH_FE_LEN + NUM_MSG_HASH_LIMBS;
@@ -92,14 +91,8 @@ pub fn generate_trace_row_acc(
 ) {
     let value = values[MSG_HASH_FE_LEN - 1 - step].as_canonical_u32();
     let value_limbs: [_; NUM_LIMBS] = from_fn(|i| (value >> (i * LIMB_BITS)) & LIMB_MASK);
-    let value_ms_limb_bits: [_; F_MS_LIMB_BITS] =
-        from_fn(|i| (value_limbs[NUM_LIMBS - 1] >> i) & 1 == 1);
-    let value_ms_limb_auxs = {
-        let aux0 = value_ms_limb_bits[6] & value_ms_limb_bits[5] & value_ms_limb_bits[4];
-        let aux1 = value_ms_limb_bits[3] && !value_ms_limb_bits[2] && !value_ms_limb_bits[1];
-        let aux2 = aux0 & aux1 && !value_ms_limb_bits[0];
-        [aux0, aux1, aux2]
-    };
+    let value_ms_limb = value_limbs[NUM_LIMBS - 1];
+    let value_ms_limb_bits: [_; F_MS_LIMB_BITS] = from_fn(|i| (value_ms_limb >> i) & 1 == 1);
     let mut carries = [0; NUM_MSG_HASH_LIMBS - 1];
     *acc_limbs = from_fn(|i| {
         let sum = if i == 0 {
@@ -136,8 +129,10 @@ pub fn generate_trace_row_acc(
         .fill_from_iter(value_ms_limb_bits.map(F::from_bool));
     row.value_limb_0_is_zero.populate(value_ls_limbs[0]);
     row.value_limb_1_is_zero.populate(value_ls_limbs[1]);
-    row.value_ms_limb_auxs
-        .fill_from_iter(value_ms_limb_auxs.map(F::from_bool));
+    row.is_ms_limb_max.populate(
+        F::from_canonical_u32((value_ms_limb >> F_MS_LIMB_TRAILING_ZEROS).count_ones()),
+        F::from_canonical_u32(F_MS_LIMB_LEADING_ONES),
+    );
     row.acc_limbs
         .fill_from_iter(acc_limbs.map(F::from_canonical_u32));
     row.carries
@@ -165,7 +160,8 @@ pub fn generate_trace_row_decomposition(
     row.value_ms_limb_bits.fill_zero();
     row.value_limb_0_is_zero.populate(F::ZERO);
     row.value_limb_1_is_zero.populate(F::ZERO);
-    row.value_ms_limb_auxs.fill_zero();
+    row.is_ms_limb_max
+        .populate(F::ZERO, F::from_canonical_u32(F_MS_LIMB_LEADING_ONES));
     row.carries.fill_zero();
 }
 
@@ -188,7 +184,8 @@ pub fn generate_trace_row_padding(row: &mut DecompositionCols<MaybeUninit<F>>) {
     row.value_ms_limb_bits.fill_zero();
     row.value_limb_0_is_zero.populate(F::ZERO);
     row.value_limb_1_is_zero.populate(F::ZERO);
-    row.value_ms_limb_auxs.fill_zero();
+    row.is_ms_limb_max
+        .populate(F::ZERO, F::from_canonical_u32(F_MS_LIMB_LEADING_ONES));
     row.acc_limbs.fill_zero();
     row.carries.fill_zero();
     row.decomposition_bits.fill_zero();

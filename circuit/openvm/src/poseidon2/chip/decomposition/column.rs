@@ -1,5 +1,5 @@
 use crate::{
-    gadget::{cycle_bits::CycleBits, is_zero::IsZeroCols},
+    gadget::{cycle_bits::CycleBits, is_equal::IsEqualCols, is_zero::IsZeroCols},
     poseidon2::{
         chip::decomposition::{F_MS_LIMB_BITS, LIMB_BITS, NUM_LIMBS, NUM_MSG_HASH_LIMBS},
         hash_sig::MSG_HASH_FE_LEN,
@@ -9,7 +9,8 @@ use core::{
     borrow::{Borrow, BorrowMut},
     slice,
 };
-use openvm_stark_backend::{p3_air::AirBuilder, p3_field::FieldAlgebra};
+use p3_air::AirBuilder;
+use p3_field::FieldAlgebra;
 
 pub const NUM_DECOMPOSITION_COLS: usize = size_of::<DecompositionCols<u8>>();
 
@@ -29,8 +30,8 @@ pub struct DecompositionCols<T> {
     pub value_limb_0_is_zero: IsZeroCols<T>,
     /// Whether `value_ls_limbs[1] == 0`.
     pub value_limb_1_is_zero: IsZeroCols<T>,
-    /// Equals to `[value_ms_limb_bits[4] & value_ms_limb_bits[3] & value_ms_limb_bits[2], value_ms_limb_bits[1] & !value_ms_limb_bits[0]]`.
-    pub value_ms_limb_auxs: [T; 3],
+    /// Whether `sum(value_ms_limb_bits[F_MS_LIMB_TRAILING_ZEROS..]) == F_MS_LIMB_LEADING_ONES`
+    pub is_ms_limb_max: IsEqualCols<T>,
     /// Limbs of accumulation value.
     pub acc_limbs: [T; NUM_MSG_HASH_LIMBS],
     /// Bit decomposition of `acc_limbs[decomposition_step]` in little-endian.

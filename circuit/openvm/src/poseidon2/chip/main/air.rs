@@ -8,10 +8,10 @@ use crate::poseidon2::{
 use core::{borrow::Borrow, iter};
 use openvm_stark_backend::{
     interaction::InteractionBuilder,
-    p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir},
-    p3_matrix::Matrix,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
 };
+use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir};
+use p3_matrix::Matrix;
 
 #[derive(Clone, Copy, Debug)]
 pub struct MainAir;

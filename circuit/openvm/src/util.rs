@@ -1,6 +1,10 @@
-use core::mem::MaybeUninit;
-use openvm_stark_backend::p3_field::Field;
-use std::borrow::{Borrow, BorrowMut};
+use core::{
+    borrow::{Borrow, BorrowMut},
+    mem::MaybeUninit,
+};
+use p3_field::Field;
+
+pub use hash_sig_verifier::concat_array;
 
 pub trait MaybeUninitField<F: Field>: BorrowMut<MaybeUninit<F>> {
     #[inline]

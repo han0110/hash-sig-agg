@@ -5,8 +5,16 @@ pub const SBOX_DEGREE: u64 = 7;
 
 pub const HALF_FULL_ROUNDS: usize = 4;
 
+pub const fn partial_round<const WIDTH: usize>() -> usize {
+    match WIDTH {
+        16 => 13,
+        24 => 21,
+        _ => unimplemented!(),
+    }
+}
+
 #[rustfmt::skip]
-pub const RC16: RoundConstants<BabyBear, 16, 4, 13> = RoundConstants { 
+pub const RC16: RoundConstants<BabyBear, 16, HALF_FULL_ROUNDS, { partial_round::<16>() }> = RoundConstants { 
     beginning_full_round_constants: BabyBear::new_2d_array([
         [0x69cbb6af, 0x46ad93f9, 0x60a00f4e, 0x6b1297cd, 0x23189afe, 0x732e7bef, 0x72c246de, 0x2c941900, 0x0557eede, 0x1580496f, 0x3a3ea77b, 0x54f3f271, 0x0f49b029, 0x47872fe1, 0x221e2e36, 0x1ab7202e],
         [0x487779a6, 0x3851c9d8, 0x38dc17c0, 0x209f8849, 0x268dcee8, 0x350c48da, 0x5b9ad32e, 0x0523272b, 0x3f89055b, 0x01e894b2, 0x13ddedde, 0x1b2ef334, 0x7507d8b4, 0x6ceeb94e, 0x52eb6ba2, 0x50642905],
@@ -23,7 +31,7 @@ pub const RC16: RoundConstants<BabyBear, 16, 4, 13> = RoundConstants {
 };
 
 #[rustfmt::skip]
-pub const RC24: RoundConstants<BabyBear, 24, 4, 21> = RoundConstants { 
+pub const RC24: RoundConstants<BabyBear, 24, HALF_FULL_ROUNDS, { partial_round::<24>() }> = RoundConstants { 
     beginning_full_round_constants: BabyBear::new_2d_array([
         [0x0fa20c37, 0x0795bb97, 0x12c60b9c, 0x0eabd88e, 0x096485ca, 0x07093527, 0x1b1d4e50, 0x30a01ace, 0x3bd86f5a, 0x69af7c28, 0x3f94775f, 0x731560e8, 0x465a0ecd, 0x574ef807, 0x62fd4870, 0x52ccfe44, 0x14772b14, 0x4dedf371, 0x260acd7c, 0x1f51dc58, 0x75125532, 0x686a4d7b, 0x54bac179, 0x31947706],
         [0x29799d3b, 0x6e01ae90, 0x203a7a64, 0x4f7e25be, 0x72503f77, 0x45bd3b69, 0x769bd6b4, 0x5a867f08, 0x4fdba082, 0x251c4318, 0x28f06201, 0x6788c43a, 0x4c6d6a99, 0x357784a8, 0x2abaf051, 0x770f7de6, 0x1794b784, 0x4796c57a, 0x724b7a10, 0x449989a7, 0x64935cf1, 0x59e14aac, 0x0e620bb8, 0x3af5a33b],

@@ -10,12 +10,12 @@ use crate::poseidon2::{
 use core::any::type_name;
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},
-    p3_commit::PolynomialSpace,
-    p3_field::PrimeField32,
     prover::types::{AirProofInput, AirProofRawInput},
     rap::AnyRap,
     Chip, ChipUsageGetter,
 };
+use p3_commit::PolynomialSpace;
+use p3_field::PrimeField32;
 use std::sync::Arc;
 
 pub const LIMB_BITS: usize = 12;
@@ -30,6 +30,11 @@ pub const F_MS_LIMB: u32 = {
     F::ORDER_U32 >> (2 * LIMB_BITS)
 };
 pub const F_MS_LIMB_BITS: usize = F_MS_LIMB.next_power_of_two().ilog2() as usize;
+pub const F_MS_LIMB_TRAILING_ZEROS: u32 = F_MS_LIMB.trailing_zeros();
+pub const F_MS_LIMB_LEADING_ONES: u32 = F_MS_LIMB_BITS as u32 - F_MS_LIMB_TRAILING_ZEROS;
+
+const __: () =
+    assert!((F_MS_LIMB >> F_MS_LIMB_TRAILING_ZEROS).trailing_ones() == F_MS_LIMB_LEADING_ONES);
 
 mod air;
 mod column;
