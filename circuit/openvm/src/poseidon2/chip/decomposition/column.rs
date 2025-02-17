@@ -5,13 +5,15 @@ use crate::{
             decomposition::{F_MS_LIMB_BITS, LIMB_BITS, NUM_LIMBS, NUM_MSG_HASH_LIMBS},
             AlignBorrow,
         },
-        hash_sig::MSG_HASH_FE_LEN,
+        hash_sig::{CHUNK_SIZE, MSG_HASH_FE_LEN},
     },
 };
 use core::{
+    array::from_fn,
     borrow::{Borrow, BorrowMut},
     slice,
 };
+use itertools::Itertools;
 use p3_air::AirBuilder;
 use p3_field::FieldAlgebra;
 
@@ -37,9 +39,12 @@ pub struct DecompositionCols<T> {
     pub is_ms_limb_max: IsEqualCols<T>,
     /// Limbs of accumulation value.
     pub acc_limbs: [T; NUM_MSG_HASH_LIMBS],
+    /// Carries of limbs addition.
+    pub carries: [T; NUM_MSG_HASH_LIMBS - 1],
     /// Bit decomposition of `acc_limbs[decomposition_step]` in little-endian.
     pub decomposition_bits: [T; LIMB_BITS],
-    pub carries: [T; NUM_MSG_HASH_LIMBS - 1],
+    /// Sum of decomposed chunks.
+    pub sum: T,
 }
 
 impl<T> DecompositionCols<T> {
@@ -75,7 +80,7 @@ impl<T: Copy> DecompositionCols<T> {
     where
         T: Into<AB::Expr>,
     {
-        self.acc_inds().iter().copied().map(Into::into).sum()
+        self.acc_inds().iter().copied().map_into().sum()
     }
 
     #[inline]
@@ -95,7 +100,7 @@ impl<T: Copy> DecompositionCols<T> {
             .iter()
             .take(MSG_HASH_FE_LEN - 1)
             .copied()
-            .map(Into::into)
+            .map_into()
             .sum()
     }
 
@@ -117,11 +122,7 @@ impl<T: Copy> DecompositionCols<T> {
     where
         T: Into<AB::Expr>,
     {
-        self.decomposition_inds()
-            .iter()
-            .copied()
-            .map(Into::into)
-            .sum()
+        self.decomposition_inds().iter().copied().map_into().sum()
     }
 
     #[inline]
@@ -133,8 +134,24 @@ impl<T: Copy> DecompositionCols<T> {
             .iter()
             .take(NUM_MSG_HASH_LIMBS - 1)
             .copied()
-            .map(Into::into)
+            .map_into()
             .sum()
+    }
+
+    #[inline]
+    pub fn is_first_decomposition_row<AB: AirBuilder>(&self) -> AB::Expr
+    where
+        T: Into<AB::Expr>,
+    {
+        self.decomposition_inds().first().copied().unwrap().into()
+    }
+
+    #[inline]
+    pub fn is_last_decomposition_row<AB: AirBuilder>(&self) -> AB::Expr
+    where
+        T: Into<AB::Expr>,
+    {
+        self.decomposition_inds().last().copied().unwrap().into()
     }
 
     #[inline]
@@ -145,6 +162,22 @@ impl<T: Copy> DecompositionCols<T> {
         self.value_ms_limb_bits
             .iter()
             .rfold(AB::Expr::ZERO, |acc, bit| acc.double() + (*bit).into())
+    }
+
+    #[inline]
+    pub fn decomposed_chunks<AB: AirBuilder>(&self) -> [AB::Expr; LIMB_BITS / CHUNK_SIZE]
+    where
+        T: Into<AB::Expr>,
+    {
+        from_fn(|i| {
+            self.decomposition_bits[CHUNK_SIZE * i..][..CHUNK_SIZE]
+                .iter()
+                .rev()
+                .copied()
+                .map_into()
+                .reduce(|acc, bit| acc.double() + bit)
+                .unwrap()
+        })
     }
 }
 

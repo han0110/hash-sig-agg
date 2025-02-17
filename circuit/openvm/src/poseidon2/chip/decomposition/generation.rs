@@ -5,12 +5,13 @@ use crate::{
             F_MS_LIMB, F_MS_LIMB_BITS, F_MS_LIMB_LEADING_ONES, F_MS_LIMB_TRAILING_ZEROS, LIMB_BITS,
             LIMB_MASK, NUM_LIMBS, NUM_MSG_HASH_LIMBS,
         },
-        hash_sig::{VerificationTrace, MSG_HASH_FE_LEN},
+        hash_sig::{VerificationTrace, CHUNK_SIZE, MSG_HASH_FE_LEN},
         F,
     },
     util::{par_zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::{array::from_fn, iter::repeat_with, mem::MaybeUninit};
+use itertools::Itertools;
 use p3_field::{FieldAlgebra, PrimeField32};
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
 use p3_maybe_rayon::prelude::*;
@@ -57,12 +58,19 @@ pub fn generate_trace_rows(
                     acc_rows.iter_mut().enumerate().for_each(|(step, row)| {
                         generate_trace_row_acc(row, sig_idx, &mut acc_limbs, values, step, &mult);
                     });
-                    decomposition_rows
-                        .par_iter_mut()
-                        .enumerate()
-                        .for_each(|(step, row)| {
-                            generate_trace_row_decomposition(row, sig_idx, &acc_limbs, step);
-                        });
+                    let sums = trace
+                        .x
+                        .chunks(LIMB_BITS / CHUNK_SIZE)
+                        .scan(0u32, |sum, x| {
+                            *sum += u32::from(x.iter().copied().sum::<u16>());
+                            Some(*sum)
+                        })
+                        .collect_vec();
+                    par_zip!(decomposition_rows, sums).enumerate().for_each(
+                        |(step, (row, sum))| {
+                            generate_trace_row_decomposition(row, sig_idx, &acc_limbs, sum, step);
+                        },
+                    );
                 });
         },
         || generate_trace_rows_padding(padding_rows),
@@ -137,6 +145,7 @@ pub fn generate_trace_row_acc(
         .fill_from_iter(carries.map(F::from_canonical_u32));
 
     row.decomposition_bits.fill_zero();
+    row.sum.write_zero();
 }
 
 #[inline]
@@ -144,6 +153,7 @@ pub fn generate_trace_row_decomposition(
     row: &mut DecompositionCols<MaybeUninit<F>>,
     sig_idx: usize,
     acc_limbs: &[u32; NUM_MSG_HASH_LIMBS],
+    sum: u32,
     step: usize,
 ) {
     row.sig_idx.write_usize(sig_idx);
@@ -152,6 +162,7 @@ pub fn generate_trace_row_decomposition(
         .fill_from_iter(acc_limbs.map(F::from_canonical_u32));
     row.decomposition_bits
         .fill_from_iter((0..LIMB_BITS).map(|i| F::from_bool((acc_limbs[step] >> i) & 1 == 1)));
+    row.sum.write_u32(sum);
 
     row.values.fill_zero();
     row.value_ls_limbs.fill_zero();
@@ -187,4 +198,5 @@ pub fn generate_trace_row_padding(row: &mut DecompositionCols<MaybeUninit<F>>) {
     row.acc_limbs.fill_zero();
     row.carries.fill_zero();
     row.decomposition_bits.fill_zero();
+    row.sum.write_zero();
 }

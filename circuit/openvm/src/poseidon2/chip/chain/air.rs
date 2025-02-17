@@ -8,7 +8,6 @@ use crate::{
             },
             Bus,
         },
-        hash_sig::{CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
     util::zip,
@@ -162,10 +161,6 @@ where
     AB: AirBuilder<F = F>,
 {
     builder.assert_one(cols.is_x_i);
-    builder.assert_eq(
-        cols.sum,
-        cols.chain_idx * F::from_canonical_usize((1 << CHUNK_SIZE) - 1) + cols.chain_step::<AB>(),
-    );
 }
 
 #[inline]
@@ -185,7 +180,6 @@ where
 {
     let mut builder = builder.when(local.is_last_sig_row::<AB>());
 
-    builder.assert_eq(local.sum, F::from_canonical_u16(TARGET_SUM));
     eval_sig_first_row(&mut builder.when(*next.is_active), next);
 }
 
@@ -200,7 +194,6 @@ fn eval_chain_transition<AB>(
     let mut builder =
         builder.when(local.is_sig_transition::<AB>() * not(local.is_last_chain_step::<AB>()));
 
-    builder.assert_eq(next.sum, local.sum);
     builder.assert_eq(next.chain_idx, local.chain_idx);
     builder.assert_eq(
         next.chain_step::<AB>(),
@@ -216,26 +209,14 @@ fn eval_chain_last_row<AB>(builder: &mut AB, local: &ChainCols<AB::Var>, next: &
 where
     AB: AirBuilder<F = F>,
 {
-    builder.when(local.is_last_chain_step::<AB>()).assert_eq(
-        select(
-            local.is_last_sig_row::<AB>(),
-            next.chain_idx.into(),
-            AB::Expr::from_canonical_usize(NUM_CHUNKS),
-        ),
-        local.chain_idx + local.chain_idx_diff::<AB>(),
+    let mut builder =
+        builder.when(local.is_last_chain_step::<AB>() - local.is_last_sig_row::<AB>());
+
+    builder.assert_eq(
+        next.chain_idx.into(),
+        local.chain_idx + next.chain_idx_diff::<AB>(),
     );
-    builder
-        .when(local.is_last_chain_step::<AB>() - local.is_last_sig_row::<AB>())
-        .assert_eq(
-            next.sum,
-            local.sum
-                + (local.chain_idx_diff::<AB>() - AB::Expr::ONE)
-                    * F::from_canonical_usize((1 << CHUNK_SIZE) - 1)
-                + next.chain_step::<AB>(),
-        );
-    builder
-        .when(local.is_last_chain_step::<AB>() - local.is_last_sig_row::<AB>())
-        .assert_one(next.is_x_i);
+    builder.assert_one(next.is_x_i);
 }
 
 #[inline]

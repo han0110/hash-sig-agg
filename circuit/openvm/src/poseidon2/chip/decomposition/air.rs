@@ -9,12 +9,13 @@ use crate::{
             },
             Bus,
         },
-        hash_sig::{CHUNK_SIZE, MSG_HASH_FE_LEN},
+        hash_sig::{CHUNK_SIZE, MSG_HASH_FE_LEN, TARGET_SUM},
         F,
     },
     util::zip,
 };
 use core::{borrow::Borrow, iter};
+use itertools::Itertools;
 use openvm_stark_backend::{
     interaction::InteractionBuilder,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
@@ -50,7 +51,9 @@ where
 
         // When every row
         eval_every_row(builder, local);
+        eval_decomposition_first_row(builder, local);
         eval_decomposition_every_row(builder, local);
+        eval_decomposition_last_row(builder, local);
 
         // When first row
         {
@@ -92,7 +95,7 @@ where
         cols.value_ms_limb_bits[F_MS_LIMB_TRAILING_ZEROS as usize..]
             .iter()
             .copied()
-            .map(Into::into)
+            .map_into()
             .sum::<AB::Expr>(),
         AB::Expr::from_canonical_u32(F_MS_LIMB_LEADING_ONES),
     );
@@ -107,7 +110,7 @@ where
             cols.value_ms_limb_bits[..F_MS_LIMB_TRAILING_ZEROS as usize]
                 .iter()
                 .copied()
-                .map(Into::into)
+                .map_into()
                 .sum::<AB::Expr>(),
         );
     }
@@ -123,7 +126,7 @@ where
         .value_ls_limbs
         .iter()
         .copied()
-        .map(Into::into)
+        .map_into()
         .chain([cols.value_ms_limb::<AB>()])
         .enumerate()
         .map(|(idx, limb)| limb * F::from_canonical_u32(1 << (idx * LIMB_BITS)))
@@ -163,7 +166,7 @@ where
         cols.value_ls_limbs
             .iter()
             .copied()
-            .map(Into::into)
+            .map_into()
             .chain([cols.value_ms_limb::<AB>()])
             .chain([AB::Expr::ZERO; NUM_MSG_HASH_LIMBS - NUM_LIMBS]),
     )
@@ -252,6 +255,19 @@ where
 }
 
 #[inline]
+fn eval_decomposition_first_row<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
+where
+    AB: AirBuilder<F = F>,
+{
+    let mut builder = builder.when(cols.is_first_decomposition_row::<AB>());
+
+    builder.assert_eq(
+        cols.sum,
+        cols.decomposed_chunks::<AB>().into_iter().sum::<AB::Expr>(),
+    );
+}
+
+#[inline]
 fn eval_decomposition_transition<AB>(
     builder: &mut AB,
     local: &DecompositionCols<AB::Var>,
@@ -262,6 +278,20 @@ fn eval_decomposition_transition<AB>(
     let mut builder = builder.when(local.is_decomposition_transition::<AB>());
 
     zip!(next.acc_limbs, local.acc_limbs).for_each(|(a, b)| builder.assert_eq(a, b));
+    builder.assert_eq(
+        next.sum,
+        local.sum + next.decomposed_chunks::<AB>().into_iter().sum::<AB::Expr>(),
+    );
+}
+
+#[inline]
+fn eval_decomposition_last_row<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
+where
+    AB: AirBuilder<F = F>,
+{
+    let mut builder = builder.when(cols.is_last_decomposition_row::<AB>());
+
+    builder.assert_eq(cols.sum, AB::Expr::from_canonical_u16(TARGET_SUM));
 }
 
 #[inline]
@@ -293,15 +323,14 @@ where
         .chunks(CHUNK_SIZE)
         .enumerate()
         .for_each(|(chunk_idx, chunk)| {
-            let is_chain_mid = not(chunk.iter().copied().map(Into::into).product::<AB::Expr>());
+            let chunk = chunk.iter().rev().copied().map_into();
+            let is_chain_mid = not(chunk.clone().product::<AB::Expr>());
             builder.push_send(
                 Bus::Chain as usize,
                 [
                     cols.sig_idx.into(),
                     i_offset.clone() + AB::Expr::from_canonical_usize(chunk_idx),
-                    chunk
-                        .iter()
-                        .rfold(AB::Expr::ZERO, |acc, bit| acc.double() + *bit),
+                    chunk.reduce(|acc, bit| acc.double() + bit).unwrap(),
                 ],
                 cols.is_decomposition::<AB>() * is_chain_mid,
             );

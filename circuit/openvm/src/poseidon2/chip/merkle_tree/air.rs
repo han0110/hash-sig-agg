@@ -14,6 +14,7 @@ use crate::{
     util::zip,
 };
 use core::{array::from_fn, borrow::Borrow, iter};
+use itertools::Itertools;
 use openvm_stark_backend::{
     air_builders::sub::SubAirBuilder,
     interaction::InteractionBuilder,
@@ -85,7 +86,7 @@ where
 
         let main = builder.main();
 
-        let mut public_values = builder.public_values().iter().copied().map(Into::into);
+        let mut public_values = builder.public_values().iter().copied().map_into();
         let epoch = public_values.next().unwrap();
         let encoded_msg: [_; MSG_FE_LEN] = from_fn(|_| public_values.next().unwrap());
         let encoded_tweak_msg: [_; TWEAK_FE_LEN] = from_fn(|_| public_values.next().unwrap());
@@ -210,7 +211,7 @@ where
         cols.leaf_chunk_start_ind[1..]
             .iter()
             .copied()
-            .map(Into::into)
+            .map_into()
             .sum::<AB::Expr>(),
     );
 }
@@ -392,12 +393,7 @@ fn receive_merkle_tree<AB>(
         Bus::MerkleLeaf as usize,
         iter::empty()
             .chain([local.sig_idx.into(), local.leaf_chunk_idx.into()])
-            .chain(
-                local.sponge_block[..HASH_FE_LEN]
-                    .iter()
-                    .copied()
-                    .map(Into::into),
-            ),
+            .chain(local.sponge_block[..HASH_FE_LEN].iter().copied().map_into()),
         local.is_recevie_merkle_tree[0] * local.leaf_chunk_start_ind[0].into(),
     );
     builder.push_receive(

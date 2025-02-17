@@ -1,11 +1,10 @@
 use crate::poseidon2::{
     chip::main::MainChip,
-    hash_sig::{VerificationInput, VerificationTrace},
+    hash_sig::{encode_msg, VerificationInput, VerificationTrace},
     F,
 };
 use chain::ChainChip;
 use decomposition::DecompositionChip;
-use hash_sig_verifier::instantiation::poseidon2::encode_msg;
 use merkle_tree::MerkleTreeChip;
 use openvm_stark_backend::{
     config::{Domain, StarkGenericConfig},

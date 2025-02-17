@@ -47,8 +47,6 @@ pub struct ChainCols<T> {
     pub chain_step_bits: [T; CHUNK_SIZE],
     /// Whether `chain_step` is equal to `x_i` or not.
     pub is_x_i: T,
-    /// Sum of `x_i`.
-    pub sum: T,
 }
 
 impl<T> ChainCols<T> {

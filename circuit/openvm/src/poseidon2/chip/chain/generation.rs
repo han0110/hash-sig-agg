@@ -10,7 +10,7 @@ use crate::{
     },
     util::{par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
-use core::mem::MaybeUninit;
+use core::{iter, mem::MaybeUninit};
 use itertools::Itertools;
 use p3_field::{Field, FieldAlgebra};
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
@@ -79,15 +79,13 @@ pub fn generate_trace_rows_sig(
         });
     let mut rows = rows.iter_mut();
     let chain_mid_indices = zip!(0..NUM_CHUNKS as u32, trace.x)
-        .filter_map(|(i, x_i)| (x_i != MAX_X_I as u16).then_some(i))
-        .chain([NUM_CHUNKS as u32])
-        .collect_vec();
-    chain_mid_indices.iter().tuple_windows().fold(
-        chain_mid_indices[0] * MAX_X_I,
-        |mut sum, (&i, &next_i)| {
+        .filter_map(|(i, x_i)| (x_i != MAX_X_I as u16).then_some(i));
+    iter::once(0)
+        .chain(chain_mid_indices)
+        .tuple_windows()
+        .for_each(|(i_prev, i)| {
             let x_i = u32::from(trace.x[i as usize]);
-            let i_diff = next_i - i;
-            sum += x_i;
+            let i_diff = if i == i_prev { 1 } else { i - i_prev };
             zip!(x_i..MAX_X_I, rows.by_ref().take((MAX_X_I - x_i) as usize)).for_each(
                 |(chain_step, row)| {
                     row.chain_idx.write_u32(i);
@@ -105,12 +103,9 @@ pub fn generate_trace_rows_sig(
                         (0..CHUNK_SIZE).map(|idx| F::from_bool((chain_step >> idx) & 1 == 1)),
                     );
                     row.is_x_i.write_bool(chain_step == x_i);
-                    row.sum.write_u32(sum);
                 },
             );
-            sum + (next_i - i - 1) * MAX_X_I
-        },
-    );
+        });
     debug_assert!(rows.next().is_none());
 }
 
@@ -135,7 +130,6 @@ pub fn generate_trace_row_padding(row: &mut ChainCols<MaybeUninit<F>>) {
     row.chain_idx_diff_inv.write_zero();
     row.chain_step_bits.fill_zero();
     row.is_x_i.write_zero();
-    row.sum.write_zero();
     generate_trace_rows_for_perm::<
         F,
         Poseidon2LinearLayers<WIDTH>,

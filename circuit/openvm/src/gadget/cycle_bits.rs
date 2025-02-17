@@ -3,6 +3,7 @@ use core::{
     mem::MaybeUninit,
     ops::{Deref, DerefMut},
 };
+use itertools::Itertools;
 use p3_air::AirBuilder;
 use p3_field::{Field, FieldAlgebra};
 
@@ -60,7 +61,7 @@ impl<T: Copy, const N: usize> CycleBits<T, N> {
         );
         builder
             .when(self[N - 1])
-            .assert_zero(next[1..].iter().copied().map(Into::into).sum::<AB::Expr>());
+            .assert_zero(next[1..].iter().copied().map_into().sum::<AB::Expr>());
         builder
             .when(not(self.is_active::<AB>()))
             .assert_zero(next.is_active::<AB>());
@@ -82,7 +83,7 @@ impl<T: Copy, const N: usize> CycleBits<T, N> {
     where
         T: Into<AB::Expr>,
     {
-        self.into_iter().map(Into::into).sum()
+        self.into_iter().map_into().sum()
     }
 
     #[inline]
@@ -90,7 +91,7 @@ impl<T: Copy, const N: usize> CycleBits<T, N> {
     where
         T: Into<AB::Expr>,
     {
-        self.into_iter().take(N - 1).map(Into::into).sum()
+        self.into_iter().take(N - 1).map_into().sum()
     }
 
     #[inline]
