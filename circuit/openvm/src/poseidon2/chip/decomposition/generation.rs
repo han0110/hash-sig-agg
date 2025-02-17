@@ -8,7 +8,7 @@ use crate::{
         hash_sig::{VerificationTrace, MSG_HASH_FE_LEN},
         F,
     },
-    util::{MaybeUninitField, MaybeUninitFieldSlice},
+    util::{par_zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::{array::from_fn, iter::repeat_with, mem::MaybeUninit};
 use p3_field::{FieldAlgebra, PrimeField32};
@@ -48,16 +48,14 @@ pub fn generate_trace_rows(
 
     join(
         || {
-            msg_hash_rows
-                .par_chunks_mut(NUM_ROWS_PER_SIG)
-                .zip(traces.par_iter().map(|trace| trace.msg_hash))
+            par_zip!(msg_hash_rows.par_chunks_mut(NUM_ROWS_PER_SIG), traces)
                 .enumerate()
-                .for_each(|(sig_idx, (rows, mut msg_hash))| {
-                    msg_hash.reverse(); // TODO: Remove when #9 is resolved.
+                .for_each(|(sig_idx, (rows, trace))| {
+                    let values = from_fn(|i| trace.msg_hash[MSG_HASH_FE_LEN - 1 - i]); // FIXME: Use little-endian when #9 is resolved.
                     let mut acc_limbs = Default::default();
                     let (acc_rows, decomposition_rows) = rows.split_at_mut(MSG_HASH_FE_LEN);
                     acc_rows.iter_mut().enumerate().for_each(|(step, row)| {
-                        generate_trace_row_acc(row, sig_idx, &mut acc_limbs, msg_hash, step, &mult);
+                        generate_trace_row_acc(row, sig_idx, &mut acc_limbs, values, step, &mult);
                     });
                     decomposition_rows
                         .par_iter_mut()

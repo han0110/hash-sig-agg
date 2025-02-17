@@ -30,7 +30,7 @@ jobs:
           cache-on-failure: true
 
       - name: Run test
-        run: cargo test --release -- --nocapture
+        run: cargo test --profile ci -- --nocapture
 
   lint:
     name: Lint

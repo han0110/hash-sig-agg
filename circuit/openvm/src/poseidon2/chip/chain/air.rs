@@ -11,11 +11,9 @@ use crate::{
         hash_sig::{CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
+    util::zip,
 };
-use core::{
-    borrow::Borrow,
-    iter::{self, zip},
-};
+use core::{borrow::Borrow, iter};
 use openvm_stark_backend::{
     air_builders::sub::SubAirBuilder,
     interaction::InteractionBuilder,
@@ -132,6 +130,7 @@ where
     builder
         .when(*cols.is_active)
         .assert_one(cols.chain_idx_diff_inv * cols.chain_idx_diff::<AB>());
+    cols.padding().map(|v| builder.assert_zero(v));
 }
 
 #[inline]
@@ -176,7 +175,7 @@ where
 {
     let mut builder = builder.when(local.is_sig_transition::<AB>());
 
-    zip(next.parameter(), local.parameter()).for_each(|(a, b)| builder.assert_eq(a, b));
+    zip!(next.parameter(), local.parameter()).for_each(|(a, b)| builder.assert_eq(a, b));
 }
 
 #[inline]
@@ -208,7 +207,7 @@ fn eval_chain_transition<AB>(
         local.chain_step::<AB>() + AB::Expr::ONE,
     );
     builder.assert_zero(next.is_x_i);
-    zip(next.chain_input(), local.compression_output::<AB>())
+    zip!(next.chain_input(), local.compression_output::<AB>())
         .for_each(|(a, b)| builder.assert_eq(a, b));
 }
 

@@ -23,6 +23,8 @@ use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_CHAIN_COLS: usize = size_of::<ChainCols<u8>>();
 
+const NUM_PADDING: usize = WIDTH - (PARAM_FE_LEN + TWEAK_FE_LEN + HASH_FE_LEN);
+
 #[repr(C)]
 pub struct ChainCols<T> {
     pub perm:
@@ -120,6 +122,11 @@ impl<T: Copy> ChainCols<T> {
     #[inline]
     pub fn chain_input(&self) -> [T; HASH_FE_LEN] {
         from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + i])
+    }
+
+    #[inline]
+    pub fn padding(&self) -> [T; NUM_PADDING] {
+        from_fn(|i| self.perm.inputs[WIDTH - NUM_PADDING + i])
     }
 
     #[inline]

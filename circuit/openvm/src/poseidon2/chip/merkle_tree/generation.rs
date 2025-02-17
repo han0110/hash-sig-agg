@@ -10,13 +10,9 @@ use crate::{
         },
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE, SBOX_REGISTERS,
     },
-    util::{concat_array, MaybeUninitField, MaybeUninitFieldSlice},
+    util::{concat_array, par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
-use core::{
-    array::from_fn,
-    iter::{self, zip},
-    mem::MaybeUninit,
-};
+use core::{array::from_fn, iter, mem::MaybeUninit};
 use p3_field::FieldAlgebra;
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
 use p3_maybe_rayon::prelude::*;
@@ -53,8 +49,7 @@ pub fn generate_trace_rows(
 
     join(
         || {
-            rows.par_chunks_mut(NUM_ROWS_PER_SIG)
-                .zip(traces)
+            par_zip!(rows.par_chunks_mut(NUM_ROWS_PER_SIG), traces)
                 .enumerate()
                 .for_each(|(sig_idx, (rows, trace))| {
                     let (msg_row, rows) = rows.split_first_mut().unwrap();
@@ -123,12 +118,11 @@ fn generate_trace_rows_leaf(
         .chain([false])
         .chain(trace.x.iter().map(|x_i| *x_i != (1 << CHUNK_SIZE) - 1))
         .chain([false]);
-    let output = rows
-        .iter_mut()
-        .zip(trace.merkle_tree_leaf(epoch).chunks(SPONGE_RATE))
+    let output = zip!(rows, trace.merkle_tree_leaf(epoch).chunks(SPONGE_RATE))
         .enumerate()
         .fold(input, |mut input, (sponge_step, (row, sponge_block))| {
-            zip(&mut input, sponge_block).for_each(|(input, block)| *input += *block);
+            zip!(&mut input[..SPONGE_RATE], sponge_block)
+                .for_each(|(input, block)| *input += *block);
             row.sig_idx.write_usize(sig_idx);
             row.is_msg.write_zero();
             row.is_merkle_leaf.write_one();
@@ -180,7 +174,7 @@ fn generate_trace_rows_path(
     merkle_leaf_hash: [F; HASH_FE_LEN],
 ) {
     let mut epoch_dec = epoch;
-    zip(rows, trace.sig.merkle_siblings).enumerate().fold(
+    zip!(rows, trace.sig.merkle_siblings).enumerate().fold(
         merkle_leaf_hash,
         |node, (level, (row, sibling))| {
             let is_right = epoch_dec & 1 == 1;

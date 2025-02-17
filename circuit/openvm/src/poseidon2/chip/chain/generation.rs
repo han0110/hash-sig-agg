@@ -8,9 +8,9 @@ use crate::{
         hash_sig::{VerificationTrace, CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
-    util::{MaybeUninitField, MaybeUninitFieldSlice},
+    util::{par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
-use core::{iter::zip, mem::MaybeUninit};
+use core::mem::MaybeUninit;
 use itertools::Itertools;
 use p3_field::{Field, FieldAlgebra};
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
@@ -43,8 +43,7 @@ pub fn generate_trace_rows(
 
     join(
         || {
-            rows.par_chunks_mut(TARGET_SUM as usize)
-                .zip(traces)
+            par_zip!(rows.par_chunks_mut(TARGET_SUM as _), traces)
                 .enumerate()
                 .for_each(|(sig_idx, (rows, trace))| generate_trace_rows_sig(rows, sig_idx, trace));
         },
@@ -62,8 +61,7 @@ pub fn generate_trace_rows_sig(
     sig_idx: usize,
     trace: &VerificationTrace,
 ) {
-    rows.par_iter_mut()
-        .zip(trace.chain_inputs)
+    par_zip!(&mut *rows, trace.chain_inputs)
         .enumerate()
         .for_each(|(sig_step, (row, input))| {
             row.is_active.populate(true);
@@ -80,7 +78,7 @@ pub fn generate_trace_rows_sig(
             >(&mut row.perm, input, &RC16);
         });
     let mut rows = rows.iter_mut();
-    let chain_mid_indices = zip(0.., trace.x)
+    let chain_mid_indices = zip!(0..NUM_CHUNKS as u32, trace.x)
         .filter_map(|(i, x_i)| (x_i != MAX_X_I as u16).then_some(i))
         .chain([NUM_CHUNKS as u32])
         .collect_vec();
@@ -90,7 +88,7 @@ pub fn generate_trace_rows_sig(
             let x_i = u32::from(trace.x[i as usize]);
             let i_diff = next_i - i;
             sum += x_i;
-            zip(x_i..MAX_X_I, rows.by_ref()).for_each(|(chain_step, row)| {
+            zip!(x_i..MAX_X_I, rows.by_ref()).for_each(|(chain_step, row)| {
                 row.chain_idx.write_u32(i);
                 row.chain_idx_is_zero.populate(F::from_canonical_u32(i));
                 row.chain_idx_diff_bits.fill_from_iter(

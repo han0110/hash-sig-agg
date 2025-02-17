@@ -6,8 +6,8 @@ use crate::{
             AlignBorrow,
         },
         hash_sig::{
-            HASH_FE_LEN, LOG_LIFETIME, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN, SPONGE_PERM,
-            SPONGE_RATE, TWEAK_FE_LEN,
+            HASH_FE_LEN, LOG_LIFETIME, MSG_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN,
+            SPONGE_INPUT_SIZE, SPONGE_PERM, SPONGE_RATE, TWEAK_FE_LEN,
         },
         HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
@@ -21,6 +21,10 @@ use openvm_stark_backend::p3_air::AirBuilder;
 use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_MERKLE_TREE_COLS: usize = size_of::<MerkleTreeCols<u8>>();
+
+const NUM_MSG_HASH_PADDING: usize = WIDTH - (RHO_FE_LEN + PARAM_FE_LEN + TWEAK_FE_LEN + MSG_FE_LEN);
+const NUM_MERKLE_LEAF_PADDING: usize = SPONGE_RATE - SPONGE_INPUT_SIZE % SPONGE_RATE;
+const NUM_MERKLE_PATH_PADDING: usize = WIDTH - (PARAM_FE_LEN + TWEAK_FE_LEN + 2 * HASH_FE_LEN);
 
 #[repr(C)]
 pub struct MerkleTreeCols<T> {
@@ -98,13 +102,26 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn encoded_tweak_msg(&self) -> [T; PARAM_FE_LEN] {
+    pub fn encoded_tweak_msg(&self) -> [T; TWEAK_FE_LEN] {
         from_fn(|i| self.perm.inputs[RHO_FE_LEN + PARAM_FE_LEN + i])
     }
 
     #[inline]
-    pub fn encoded_msg(&self) -> [T; PARAM_FE_LEN] {
+    pub fn encoded_msg(&self) -> [T; MSG_FE_LEN] {
         from_fn(|i| self.perm.inputs[RHO_FE_LEN + PARAM_FE_LEN + TWEAK_FE_LEN + i])
+    }
+
+    #[inline]
+    pub fn msg_hash_padding(&self) -> [T; NUM_MSG_HASH_PADDING] {
+        from_fn(|i| self.perm.inputs[WIDTH - NUM_MSG_HASH_PADDING + i])
+    }
+
+    #[inline]
+    pub fn msg_hash<AB: AirBuilder>(&self) -> [AB::Expr; MSG_HASH_FE_LEN]
+    where
+        T: Into<AB::Expr>,
+    {
+        from_fn(|i| outputs(&self.perm)[i].into() + self.perm.inputs[i].into())
     }
 
     #[inline]
@@ -118,11 +135,8 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn msg_hash<AB: AirBuilder>(&self) -> [AB::Expr; MSG_HASH_FE_LEN]
-    where
-        T: Into<AB::Expr>,
-    {
-        from_fn(|i| outputs(&self.perm)[i].into() + self.perm.inputs[i].into())
+    pub fn merkle_leaf_padding(&self) -> [T; NUM_MERKLE_LEAF_PADDING] {
+        from_fn(|i| self.sponge_block[SPONGE_RATE - NUM_MERKLE_LEAF_PADDING + i])
     }
 
     #[inline]
@@ -139,13 +153,18 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn path_left(&self) -> [T; HASH_FE_LEN] {
+    pub fn merkle_path_left(&self) -> [T; HASH_FE_LEN] {
         from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + i])
     }
 
     #[inline]
-    pub fn path_right(&self) -> [T; HASH_FE_LEN] {
+    pub fn merkle_path_right(&self) -> [T; HASH_FE_LEN] {
         from_fn(|i| self.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN + HASH_FE_LEN + i])
+    }
+
+    #[inline]
+    pub fn merkle_path_padding(&self) -> [T; NUM_MERKLE_PATH_PADDING] {
+        from_fn(|i| self.perm.inputs[WIDTH - NUM_MERKLE_PATH_PADDING + i])
     }
 }
 

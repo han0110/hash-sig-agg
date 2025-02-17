@@ -53,21 +53,12 @@ impl<F: Field, T: BorrowMut<MaybeUninit<F>>> MaybeUninitField<F> for T {}
 pub trait MaybeUninitFieldSlice<F: Field>: AsMut<[MaybeUninit<F>]> {
     #[inline]
     fn fill_from_slice(&mut self, values: &[F]) {
-        debug_assert_eq!(self.as_mut().len(), values.len());
-        self.as_mut()
-            .iter_mut()
-            .zip(values)
-            .for_each(|(cell, value)| cell.write_f(*value));
+        zip!(self.as_mut(), values).for_each(|(cell, value)| cell.write_f(*value));
     }
 
     #[inline]
     fn fill_from_iter(&mut self, values: impl IntoIterator<Item: Borrow<F>>) {
-        let mut values = values.into_iter();
-        self.as_mut()
-            .iter_mut()
-            .zip(values.by_ref())
-            .for_each(|(cell, value)| cell.write_f(*value.borrow()));
-        debug_assert!(values.next().is_none());
+        zip!(self.as_mut(), values).for_each(|(cell, value)| cell.write_f(*value.borrow()));
     }
 
     #[inline]
@@ -86,3 +77,35 @@ pub trait MaybeUninitFieldSlice<F: Field>: AsMut<[MaybeUninit<F>]> {
 }
 
 impl<F: Field, T: ?Sized + AsMut<[MaybeUninit<F>]>> MaybeUninitFieldSlice<F> for T {}
+
+macro_rules! zip {
+    (@closure $p:pat => $tup:expr) => {
+        |$p| $tup
+    };
+    (@closure $p:pat => ($($tup:tt)*) , $_iter:expr $(, $tail:expr)*) => {
+        $crate::util::zip!(@closure ($p, b) => ($($tup)*, b) $(, $tail)*)
+    };
+    ($first:expr $(,)*) => {
+        ::core::iter::IntoIterator::into_iter($first)
+    };
+    ($first:expr, $second:expr $(,)*) => {{
+        #[cfg(debug_assertions)]
+        { ::itertools::Itertools::zip_eq($crate::util::zip!($first), $second) }
+        #[cfg(not(debug_assertions))]
+        { ::core::iter::Iterator::zip($crate::util::zip!($first), $second) }
+    }};
+    ($first:expr $(, $rest:expr)* $(,)*) => {{
+        let t = $crate::util::zip!($first);
+        $(let t = $crate::util::zip!(t, $rest);)*
+        t.map($crate::util::zip!(@closure a => (a) $(, $rest)*))
+    }};
+}
+
+macro_rules! par_zip {
+    ($first:expr $(, $rest:expr)* $(,)*) => {{
+        use p3_maybe_rayon::prelude::*;
+        (($first $(, $rest)*)).into_par_iter()
+    }};
+}
+
+pub(crate) use {par_zip, zip};

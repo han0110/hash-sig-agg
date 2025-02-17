@@ -6,7 +6,7 @@ use crate::{
         },
         F,
     },
-    util::MaybeUninitField,
+    util::{par_zip, MaybeUninitField},
 };
 use core::mem::MaybeUninit;
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
@@ -32,8 +32,7 @@ pub fn generate_trace_rows(extra_capacity_bits: usize, mult: Vec<u32>) -> RowMaj
     assert!(suffix.is_empty(), "Alignment should match");
     assert_eq!(rows.len(), height);
 
-    rows.par_iter_mut()
-        .zip(mult)
+    par_zip!(rows, mult)
         .enumerate()
         .for_each(|(idx, (row, mult))| {
             row.value.write_usize(idx);
