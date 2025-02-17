@@ -3,16 +3,15 @@ use crate::{
         chip::chain::{
             column::{ChainCols, NUM_CHAIN_COLS},
             poseidon2::{PARTIAL_ROUNDS, WIDTH},
-            MAX_CHAIN_STEP_DIFF_BITS,
         },
         hash_sig::{VerificationTrace, CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
     util::{par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
 };
-use core::{iter, mem::MaybeUninit};
+use core::mem::MaybeUninit;
 use itertools::Itertools;
-use p3_field::{Field, FieldAlgebra};
+use p3_field::FieldAlgebra;
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
 use p3_maybe_rayon::prelude::*;
 use p3_poseidon2_util::air::generate_trace_rows_for_perm;
@@ -80,25 +79,14 @@ pub fn generate_trace_rows_sig(
     let mut rows = rows.iter_mut();
     let chain_mid_indices = zip!(0..NUM_CHUNKS as u32, trace.x)
         .filter_map(|(i, x_i)| (x_i != MAX_X_I as u16).then_some(i));
-    iter::once(0)
-        .chain(chain_mid_indices)
+    chain_mid_indices
+        .chain([NUM_CHUNKS as _])
         .tuple_windows()
-        .for_each(|(i_prev, i)| {
+        .for_each(|(i, i_next)| {
             let x_i = u32::from(trace.x[i as usize]);
-            let i_diff = if i == i_prev { 1 } else { i - i_prev };
             zip!(x_i..MAX_X_I, rows.by_ref().take((MAX_X_I - x_i) as usize)).for_each(
                 |(chain_step, row)| {
-                    row.chain_idx.write_u32(i);
-                    row.chain_idx_is_zero.populate(F::from_canonical_u32(i));
-                    row.chain_idx_diff_bits.fill_from_iter(
-                        (0..MAX_CHAIN_STEP_DIFF_BITS)
-                            .map(|idx| F::from_bool((i_diff >> idx) & 1 == 1)),
-                    );
-                    row.chain_idx_diff_inv.write_f(match i_diff {
-                        1 => F::ONE,
-                        2 => F::ONE.halve(),
-                        _ => F::from_canonical_u32(i_diff).inverse(),
-                    });
+                    row.chain_idx.populate(i, i_next);
                     row.chain_step_bits.fill_from_iter(
                         (0..CHUNK_SIZE).map(|idx| F::from_bool((chain_step >> idx) & 1 == 1)),
                     );
@@ -124,10 +112,7 @@ pub fn generate_trace_row_padding(row: &mut ChainCols<MaybeUninit<F>>) {
     row.is_active.populate(false);
     row.sig_idx.write_zero();
     row.sig_step.populate(0);
-    row.chain_idx.write_zero();
-    row.chain_idx_is_zero.populate(F::ZERO);
-    row.chain_idx_diff_bits.fill_zero();
-    row.chain_idx_diff_inv.write_zero();
+    row.chain_idx.populate_padding();
     row.chain_step_bits.fill_zero();
     row.is_x_i.write_zero();
     generate_trace_rows_for_perm::<

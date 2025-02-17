@@ -1,5 +1,8 @@
 use crate::{
-    gadget::{cycle_int::CycleInt, is_zero::IsZeroCols, lower_rows_filter::LowerRowsFilterCols},
+    gadget::{
+        cycle_int::CycleInt, lower_rows_filter::LowerRowsFilterCols,
+        strictly_increasing::StrictlyIncreasingCols,
+    },
     poseidon2::{
         chip::{
             chain::{
@@ -36,13 +39,7 @@ pub struct ChainCols<T> {
     /// Signature step.
     pub sig_step: CycleInt<T, { TARGET_SUM as usize }>,
     /// Chain index.
-    pub chain_idx: T,
-    /// Whether `chain_idx == 0`.
-    pub chain_idx_is_zero: IsZeroCols<T>,
-    /// Chain index diff range check.
-    pub chain_idx_diff_bits: [T; MAX_CHAIN_STEP_DIFF_BITS],
-    /// Chain index diff inverse.
-    pub chain_idx_diff_inv: T,
+    pub chain_idx: StrictlyIncreasingCols<T, MAX_CHAIN_STEP_DIFF_BITS>,
     /// Chain step in little-endian bits, in range `0..(1 << CHUNK_SIZE)`.
     pub chain_step_bits: [T; CHUNK_SIZE],
     /// Whether `chain_step` is equal to `x_i` or not.
@@ -83,9 +80,7 @@ impl<T: Copy> ChainCols<T> {
     where
         T: Into<AB::Expr>,
     {
-        self.chain_idx_diff_bits
-            .iter()
-            .rfold(AB::Expr::ZERO, |acc, bit| acc.double() + (*bit).into())
+        self.chain_idx.diff::<AB>()
     }
 
     #[inline]

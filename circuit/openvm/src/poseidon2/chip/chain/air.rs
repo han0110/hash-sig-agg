@@ -122,13 +122,9 @@ where
 {
     cols.is_active.eval_every_row(builder);
     cols.sig_step.eval_every_row(builder);
-    cols.chain_idx_is_zero.eval(builder, cols.chain_idx);
-    cols.chain_idx_diff_bits.map(|bit| builder.assert_bool(bit));
     cols.chain_step_bits.map(|bit| builder.assert_bool(bit));
+    cols.chain_idx.eval_every_row(builder);
     builder.assert_bool(cols.is_x_i);
-    builder
-        .when(*cols.is_active)
-        .assert_one(cols.chain_idx_diff_inv * cols.chain_idx_diff::<AB>());
     cols.padding().map(|v| builder.assert_zero(v));
 }
 
@@ -194,7 +190,7 @@ fn eval_chain_transition<AB>(
     let mut builder =
         builder.when(local.is_sig_transition::<AB>() * not(local.is_last_chain_step::<AB>()));
 
-    builder.assert_eq(next.chain_idx, local.chain_idx);
+    builder.assert_eq(*next.chain_idx, *local.chain_idx);
     builder.assert_eq(
         next.chain_step::<AB>(),
         local.chain_step::<AB>() + AB::Expr::ONE,
@@ -212,10 +208,9 @@ where
     let mut builder =
         builder.when(local.is_last_chain_step::<AB>() - local.is_last_sig_row::<AB>());
 
-    builder.assert_eq(
-        next.chain_idx.into(),
-        local.chain_idx + next.chain_idx_diff::<AB>(),
-    );
+    local
+        .chain_idx
+        .eval_transition(&mut builder, &next.chain_idx);
     builder.assert_one(next.is_x_i);
 }
 
@@ -242,7 +237,7 @@ where
         Bus::Chain as usize,
         [
             local.sig_idx.into(),
-            local.chain_idx.into(),
+            (*local.chain_idx).into(),
             local.chain_step::<AB>(),
         ],
         (*local.is_active).into() * local.is_x_i.into(),
@@ -257,7 +252,10 @@ where
     builder.push_send(
         Bus::MerkleLeaf as usize,
         iter::empty()
-            .chain([local.sig_idx.into(), local.chain_idx.into() + AB::Expr::ONE])
+            .chain([
+                local.sig_idx.into(),
+                (*local.chain_idx).into() + AB::Expr::ONE,
+            ])
             .chain(local.compression_output::<AB>()),
         *local.is_active * local.is_last_chain_step::<AB>(),
     );

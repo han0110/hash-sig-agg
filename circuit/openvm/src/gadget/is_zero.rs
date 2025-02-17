@@ -3,7 +3,7 @@ use p3_air::AirBuilder;
 use p3_field::Field;
 
 #[repr(C)]
-#[derive(Copy, Clone, Debug, Default)]
+#[derive(Copy, Clone, Debug)]
 pub struct IsZeroCols<T> {
     pub inv: T,
     pub output: T,
