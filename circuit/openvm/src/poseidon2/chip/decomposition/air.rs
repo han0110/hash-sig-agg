@@ -14,10 +14,7 @@ use crate::{
     },
     util::zip,
 };
-use core::{
-    borrow::Borrow,
-    iter::{self, repeat},
-};
+use core::{borrow::Borrow, iter};
 use openvm_stark_backend::{
     interaction::InteractionBuilder,
     rap::{BaseAirWithPublicValues, PartitionedBaseAir},
@@ -162,13 +159,13 @@ where
     AB: AirBuilder<F = F>,
 {
     zip!(
-        cols.acc_limbs,
+        cols.acc_limbs.into_iter(),
         cols.value_ls_limbs
             .iter()
             .copied()
             .map(Into::into)
             .chain([cols.value_ms_limb::<AB>()])
-            .chain(repeat(AB::Expr::ZERO)),
+            .chain([AB::Expr::ZERO; NUM_MSG_HASH_LIMBS - NUM_LIMBS]),
     )
     .for_each(|(a, b)| builder.assert_eq(a, b));
 }

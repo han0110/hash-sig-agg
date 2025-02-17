@@ -88,23 +88,26 @@ pub fn generate_trace_rows_sig(
             let x_i = u32::from(trace.x[i as usize]);
             let i_diff = next_i - i;
             sum += x_i;
-            zip!(x_i..MAX_X_I, rows.by_ref()).for_each(|(chain_step, row)| {
-                row.chain_idx.write_u32(i);
-                row.chain_idx_is_zero.populate(F::from_canonical_u32(i));
-                row.chain_idx_diff_bits.fill_from_iter(
-                    (0..MAX_CHAIN_STEP_DIFF_BITS).map(|idx| F::from_bool((i_diff >> idx) & 1 == 1)),
-                );
-                row.chain_idx_diff_inv.write_f(match i_diff {
-                    1 => F::ONE,
-                    2 => F::ONE.halve(),
-                    _ => F::from_canonical_u32(i_diff).inverse(),
-                });
-                row.chain_step_bits.fill_from_iter(
-                    (0..CHUNK_SIZE).map(|idx| F::from_bool((chain_step >> idx) & 1 == 1)),
-                );
-                row.is_x_i.write_bool(chain_step == x_i);
-                row.sum.write_u32(sum);
-            });
+            zip!(x_i..MAX_X_I, rows.by_ref().take((MAX_X_I - x_i) as usize)).for_each(
+                |(chain_step, row)| {
+                    row.chain_idx.write_u32(i);
+                    row.chain_idx_is_zero.populate(F::from_canonical_u32(i));
+                    row.chain_idx_diff_bits.fill_from_iter(
+                        (0..MAX_CHAIN_STEP_DIFF_BITS)
+                            .map(|idx| F::from_bool((i_diff >> idx) & 1 == 1)),
+                    );
+                    row.chain_idx_diff_inv.write_f(match i_diff {
+                        1 => F::ONE,
+                        2 => F::ONE.halve(),
+                        _ => F::from_canonical_u32(i_diff).inverse(),
+                    });
+                    row.chain_step_bits.fill_from_iter(
+                        (0..CHUNK_SIZE).map(|idx| F::from_bool((chain_step >> idx) & 1 == 1)),
+                    );
+                    row.is_x_i.write_bool(chain_step == x_i);
+                    row.sum.write_u32(sum);
+                },
+            );
             sum + (next_i - i - 1) * MAX_X_I
         },
     );

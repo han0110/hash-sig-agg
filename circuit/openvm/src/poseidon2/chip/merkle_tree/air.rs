@@ -1,5 +1,5 @@
 use crate::{
-    gadget::not,
+    gadget::{not, select},
     poseidon2::{
         chip::{
             merkle_tree::{
@@ -279,10 +279,17 @@ fn eval_merkle_leaf_last_row<AB>(
     next.level.eval_first_row(&mut builder);
     builder.assert_eq(next.epoch_dec, epoch);
     local.merkle_leaf_padding().map(|v| builder.assert_zero(v));
-    zip!(next.merkle_path_right(), local.sponge_output())
-        .for_each(|(a, b)| builder.when(next.is_right).assert_eq(a, b));
-    zip!(next.merkle_path_left(), local.sponge_output())
-        .for_each(|(a, b)| builder.when(not(next.is_right.into())).assert_eq(a, b));
+    zip!(
+        next.merkle_path_left(),
+        next.merkle_path_right(),
+        local.sponge_output().into_iter().take(HASH_FE_LEN)
+    )
+    .for_each(|(left, right, output)| {
+        builder.assert_eq(
+            output,
+            select(next.is_right.into(), left.into(), right.into()),
+        );
+    });
 }
 
 #[inline]
@@ -311,10 +318,17 @@ fn eval_merkle_path_transition<AB>(
         next.epoch_dec.into().double() + local.is_right.into(),
         local.epoch_dec,
     );
-    zip!(next.merkle_path_right(), local.compress_output::<AB>())
-        .for_each(|(a, b)| builder.when(next.is_right).assert_eq(a, b));
-    zip!(next.merkle_path_left(), local.compress_output::<AB>())
-        .for_each(|(a, b)| builder.when(not(next.is_right.into())).assert_eq(a, b));
+    zip!(
+        next.merkle_path_left(),
+        next.merkle_path_right(),
+        local.compress_output::<AB>()
+    )
+    .for_each(|(left, right, output)| {
+        builder.assert_eq(
+            output,
+            select(next.is_right.into(), left.into(), right.into()),
+        );
+    });
 }
 
 #[inline]

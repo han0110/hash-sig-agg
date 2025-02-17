@@ -121,7 +121,7 @@ fn generate_trace_rows_leaf(
     let output = zip!(rows, trace.merkle_tree_leaf(epoch).chunks(SPONGE_RATE))
         .enumerate()
         .fold(input, |mut input, (sponge_step, (row, sponge_block))| {
-            zip!(&mut input[..SPONGE_RATE], sponge_block)
+            zip!(&mut input[..sponge_block.len()], sponge_block)
                 .for_each(|(input, block)| *input += *block);
             row.sig_idx.write_usize(sig_idx);
             row.is_msg.write_zero();
