@@ -52,11 +52,11 @@ pub fn generate_trace_rows(
             par_zip!(rows.par_chunks_mut(NUM_ROWS_PER_SIG), traces)
                 .enumerate()
                 .for_each(|(sig_idx, (rows, trace))| {
-                    let (msg_row, rows) = rows.split_first_mut().unwrap();
-                    let (leaf_rows, path_rows) = rows.split_at_mut(SPONGE_PERM);
-                    generate_trace_row_msg(msg_row, epoch, encoded_msg, trace, sig_idx);
+                    let (leaf_rows, rows) = rows.split_at_mut(SPONGE_PERM);
+                    let (msg_row, path_rows) = rows.split_last_mut().unwrap();
                     let leaf_hash = generate_trace_rows_leaf(leaf_rows, epoch, sig_idx, trace);
                     generate_trace_rows_path(path_rows, epoch, sig_idx, trace, leaf_hash);
+                    generate_trace_row_msg(msg_row, epoch, encoded_msg, trace, sig_idx);
                 });
         },
         || generate_trace_rows_padding(padding_rows),
@@ -82,7 +82,6 @@ fn generate_trace_row_msg(
     row.is_merkle_path.write_zero();
     row.is_merkle_path_transition.write_zero();
     row.is_receive_merkle_tree.fill_zero();
-    row.root.fill_from_slice(&trace.pk.merkle_root);
     row.sponge_step.populate(0);
     row.sponge_block.fill_zero();
     row.leaf_chunk_start_ind.fill_zero();
@@ -137,7 +136,6 @@ fn generate_trace_rows_leaf(
             }
             row.is_merkle_path.write_zero();
             row.is_merkle_path_transition.write_zero();
-            row.root.fill_from_slice(&trace.pk.merkle_root);
             row.sponge_step.populate(sponge_step);
             row.sponge_block[..sponge_block.len()].fill_from_slice(sponge_block);
             row.sponge_block[sponge_block.len()..].fill_zero();
@@ -147,9 +145,8 @@ fn generate_trace_rows_leaf(
             );
             row.leaf_chunk_idx
                 .write_usize((sponge_step * SPONGE_RATE).div_ceil(HASH_FE_LEN));
-            row.level.populate(0);
-            row.epoch_dec.write_zero();
-            row.is_right.write_zero();
+            zip!(row.merkle_parameter_register_mut(), trace.pk.parameter)
+                .for_each(|(cell, value)| cell.write_f(value));
             generate_trace_rows_for_perm::<
                 F,
                 Poseidon2LinearLayers<WIDTH>,
@@ -185,7 +182,6 @@ fn generate_trace_rows_path(
             row.is_merkle_path_transition
                 .write_bool(level != LOG_LIFETIME - 1);
             row.is_receive_merkle_tree.fill_zero();
-            row.root.fill_from_slice(&trace.pk.merkle_root);
             row.sponge_step.populate(0);
             row.sponge_block.fill_zero();
             row.leaf_chunk_start_ind.fill_zero();
@@ -240,7 +236,6 @@ pub fn generate_trace_row_padding(row: &mut MerkleTreeCols<MaybeUninit<F>>) {
     row.is_merkle_path.write_zero();
     row.is_merkle_path_transition.write_zero();
     row.is_receive_merkle_tree.fill_zero();
-    row.root.fill_zero();
     row.sponge_step.populate(0);
     row.sponge_block.fill_zero();
     row.leaf_chunk_start_ind.fill_zero();

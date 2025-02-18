@@ -50,7 +50,7 @@ pub trait AlignBorrow<T>: Sized {
 #[repr(u8)]
 pub enum Bus {
     Parameter,
-    MsgHash,
+    MerkleRootAndMsgHash,
     Chain,
     MerkleLeaf,
     Decomposition,

@@ -74,7 +74,7 @@ where
     AB: InteractionBuilder<F = F>,
 {
     builder.push_send(
-        Bus::MsgHash as usize,
+        Bus::MerkleRootAndMsgHash as usize,
         iter::once(cols.sig_idx)
             .chain(cols.parameter)
             .chain(cols.merkle_root)

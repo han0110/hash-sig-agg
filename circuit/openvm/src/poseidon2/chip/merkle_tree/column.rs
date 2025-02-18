@@ -18,6 +18,7 @@ use core::{
     slice,
 };
 use openvm_stark_backend::p3_air::AirBuilder;
+use p3_field::FieldAlgebra;
 use p3_poseidon2_util::air::{outputs, Poseidon2Cols};
 
 pub const NUM_MERKLE_TREE_COLS: usize = size_of::<MerkleTreeCols<u8>>();
@@ -37,7 +38,6 @@ pub struct MerkleTreeCols<T> {
     pub is_merkle_path: T,
     pub is_merkle_path_transition: T,
     pub is_receive_merkle_tree: [T; 3],
-    pub root: [T; HASH_FE_LEN],
     pub sponge_step: CycleInt<T, SPONGE_PERM>,
     pub sponge_block: [T; SPONGE_RATE],
     pub leaf_chunk_start_ind: [T; SPONGE_RATE],
@@ -69,7 +69,7 @@ impl<T: Copy> MerkleTreeCols<T> {
     where
         T: Into<AB::Expr>,
     {
-        self.is_msg.into() + self.is_merkle_leaf.into() + self.is_merkle_path_transition.into()
+        AB::Expr::ONE - self.is_msg.into()
     }
 
     #[inline]
@@ -86,6 +86,22 @@ impl<T: Copy> MerkleTreeCols<T> {
         T: Into<AB::Expr>,
     {
         self.level.is_last_step::<AB>()
+    }
+
+    #[inline]
+    pub fn is_last_merkle_leaf_row<AB: AirBuilder>(&self) -> AB::Expr
+    where
+        T: Into<AB::Expr>,
+    {
+        self.is_merkle_leaf.into() - self.is_merkle_leaf_transition.into()
+    }
+
+    #[inline]
+    pub fn is_last_merkle_path_row<AB: AirBuilder>(&self) -> AB::Expr
+    where
+        T: Into<AB::Expr>,
+    {
+        self.is_merkle_path.into() - self.is_merkle_path_transition.into()
     }
 
     #[inline]
@@ -125,18 +141,40 @@ impl<T: Copy> MerkleTreeCols<T> {
     }
 
     #[inline]
-    pub fn merkle_leaf_parameter(&self) -> [T; PARAM_FE_LEN] {
-        from_fn(|i| self.sponge_block[i])
+    pub fn merkle_parameter(&self) -> [T; PARAM_FE_LEN] {
+        from_fn(|i| self.perm.inputs[i])
     }
 
     #[inline]
-    pub fn encoded_tweak_merkle_leaf(&self) -> [T; TWEAK_FE_LEN] {
-        from_fn(|i| self.sponge_block[PARAM_FE_LEN + i])
+    pub fn encoded_tweak_merkle(&self) -> [T; TWEAK_FE_LEN] {
+        from_fn(|i| self.perm.inputs[PARAM_FE_LEN + i])
     }
 
     #[inline]
     pub fn merkle_leaf_padding(&self) -> [T; NUM_MERKLE_LEAF_PADDING] {
         from_fn(|i| self.sponge_block[SPONGE_RATE - NUM_MERKLE_LEAF_PADDING + i])
+    }
+
+    #[inline]
+    pub const fn merkle_parameter_register(&self) -> [T; PARAM_FE_LEN] {
+        [
+            self.level.step,
+            self.level.is_last_step.0.inv,
+            self.level.is_last_step.0.output,
+            self.epoch_dec,
+            self.is_right,
+        ]
+    }
+
+    #[inline]
+    pub const fn merkle_parameter_register_mut(&mut self) -> [&mut T; PARAM_FE_LEN] {
+        [
+            &mut self.level.step,
+            &mut self.level.is_last_step.0.inv,
+            &mut self.level.is_last_step.0.output,
+            &mut self.epoch_dec,
+            &mut self.is_right,
+        ]
     }
 
     #[inline]

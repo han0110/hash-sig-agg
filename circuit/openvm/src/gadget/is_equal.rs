@@ -6,7 +6,7 @@ use p3_field::Field;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug)]
-pub struct IsEqualCols<T>(IsZeroCols<T>);
+pub struct IsEqualCols<T>(pub IsZeroCols<T>);
 
 impl<T> Deref for IsEqualCols<T> {
     type Target = IsZeroCols<T>;

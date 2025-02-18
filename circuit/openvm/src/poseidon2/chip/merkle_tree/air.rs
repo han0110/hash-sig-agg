@@ -8,7 +8,10 @@ use crate::{
             },
             Bus,
         },
-        hash_sig::{HASH_FE_LEN, MSG_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE, TWEAK_FE_LEN},
+        hash_sig::{
+            HASH_FE_LEN, MSG_FE_LEN, PARAM_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE,
+            TWEAK_FE_LEN,
+        },
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE, SBOX_REGISTERS,
     },
     util::zip,
@@ -105,7 +108,8 @@ where
             let mut builder = builder.when_first_row();
 
             builder.assert_zero(local.sig_idx);
-            builder.assert_one(local.is_msg);
+            builder.assert_one(local.is_merkle_leaf);
+            eval_merkle_leaf_first_row(&mut builder, encoded_tweak_merkle_leaf.clone(), local);
         }
 
         // When transition
@@ -113,7 +117,11 @@ where
             let mut builder = builder.when_transition();
 
             eval_sig_transition(&mut builder, local, next);
-            eval_msg_transition(
+            eval_merkle_leaf_transition(&mut builder, local, next);
+            eval_merkle_leaf_last_row(&mut builder, epoch, local, next);
+            eval_merkle_path_transition(&mut builder, local, next);
+            eval_merkle_path_last_row(&mut builder, local, next);
+            eval_msg(
                 &mut builder,
                 encoded_tweak_msg,
                 encoded_msg,
@@ -121,16 +129,12 @@ where
                 local,
                 next,
             );
-            eval_merkle_leaf_transition(&mut builder, local, next);
-            eval_merkle_leaf_last_row(&mut builder, epoch, local, next);
-            eval_merkle_path_transition(&mut builder, local, next);
-            eval_merkle_path_last_row(&mut builder, local, next);
             eval_padding_transition(&mut builder, local, next);
         }
 
         // Interaction
-        receive_msg_hash(builder, local);
-        receive_merkle_tree(builder, local, next);
+        receive_merkle_root_and_msg_hash(builder, local, next);
+        receive_merkle_leaf(builder, local, next);
     }
 }
 
@@ -151,11 +155,16 @@ where
         cols.is_merkle_path * not(cols.is_last_level::<AB>()),
     );
     cols.is_receive_merkle_tree.map(|v| builder.assert_bool(v));
+    builder.when(not(cols.is_merkle_leaf.into())).assert_zero(
+        cols.is_receive_merkle_tree
+            .iter()
+            .copied()
+            .map_into()
+            .sum::<AB::Expr>(),
+    );
     builder
         .assert_bool(cols.is_msg.into() + cols.is_merkle_leaf.into() + cols.is_merkle_path.into());
     cols.sponge_step.eval_every_row(builder);
-    cols.level.eval_every_row(builder);
-    builder.assert_bool(cols.is_right);
 }
 
 #[inline]
@@ -168,32 +177,7 @@ fn eval_sig_transition<AB>(
 {
     let mut builder = builder.when(local.is_sig_transition::<AB>());
 
-    zip!(local.root, next.root).for_each(|(a, b)| builder.assert_eq(a, b));
     builder.assert_eq(local.sig_idx, next.sig_idx);
-}
-
-#[inline]
-fn eval_msg_transition<AB>(
-    builder: &mut AB,
-    encoded_tweak_msg: [AB::Expr; TWEAK_FE_LEN],
-    encoded_msg: [AB::Expr; MSG_FE_LEN],
-    encoded_tweak_merkle_leaf: [AB::Expr; TWEAK_FE_LEN],
-    local: &MerkleTreeCols<AB::Var>,
-    next: &MerkleTreeCols<AB::Var>,
-) where
-    AB: AirBuilder<F = F>,
-{
-    let mut builder = builder.when(local.is_msg);
-
-    builder.assert_one(next.is_merkle_leaf);
-    zip!(local.encoded_tweak_msg(), encoded_tweak_msg).for_each(|(a, b)| builder.assert_eq(a, b));
-    zip!(local.encoded_msg(), encoded_msg).for_each(|(a, b)| builder.assert_eq(a, b));
-    local.msg_hash_padding().map(|v| builder.assert_zero(v));
-    zip!(next.merkle_leaf_parameter(), local.msg_hash_parameter())
-        .for_each(|(a, b)| builder.assert_eq(a, b));
-    zip!(next.encoded_tweak_merkle_leaf(), encoded_tweak_merkle_leaf)
-        .for_each(|(a, b)| builder.assert_eq(a, b));
-    eval_merkle_leaf_first_row(&mut builder, next);
 }
 
 #[inline]
@@ -214,8 +198,11 @@ where
 }
 
 #[inline]
-fn eval_merkle_leaf_first_row<AB>(builder: &mut AB, cols: &MerkleTreeCols<AB::Var>)
-where
+fn eval_merkle_leaf_first_row<AB>(
+    builder: &mut AB,
+    encoded_tweak_merkle_leaf: [AB::Expr; TWEAK_FE_LEN],
+    cols: &MerkleTreeCols<AB::Var>,
+) where
     AB: AirBuilder<F = F>,
 {
     cols.sponge_step.eval_first_row(builder);
@@ -223,8 +210,15 @@ where
     (0..SPONGE_RATE)
         .step_by(HASH_FE_LEN)
         .for_each(|i| builder.assert_one(cols.leaf_chunk_start_ind[i]));
-    zip!(&cols.perm.inputs[..SPONGE_RATE], cols.sponge_block)
-        .for_each(|(a, b)| builder.assert_eq(*a, b));
+    zip!(cols.merkle_parameter(), cols.merkle_parameter_register())
+        .for_each(|(a, b)| builder.assert_eq(a, b));
+    zip!(cols.encoded_tweak_merkle(), encoded_tweak_merkle_leaf)
+        .for_each(|(a, b)| builder.assert_eq(a, b));
+    zip!(
+        &cols.perm.inputs[PARAM_FE_LEN + TWEAK_FE_LEN..SPONGE_RATE],
+        &cols.sponge_block[PARAM_FE_LEN + TWEAK_FE_LEN..]
+    )
+    .for_each(|(a, b)| builder.assert_eq(*a, *b));
     zip!(&cols.perm.inputs[SPONGE_RATE..], SPONGE_CAPACITY_VALUES)
         .for_each(|(a, b)| builder.assert_eq(*a, b));
 }
@@ -259,6 +253,11 @@ fn eval_merkle_leaf_transition<AB>(
                 builder.assert_eq(input, output);
             }
         });
+    zip!(
+        next.merkle_parameter_register(),
+        local.merkle_parameter_register()
+    )
+    .for_each(|(a, b)| builder.assert_eq(a, b));
 }
 
 #[inline]
@@ -270,13 +269,14 @@ fn eval_merkle_leaf_last_row<AB>(
 ) where
     AB: AirBuilder<F = F>,
 {
-    let mut builder =
-        builder.when(local.is_merkle_leaf.into() - local.is_merkle_leaf_transition.into());
+    let mut builder = builder.when(local.is_last_merkle_leaf_row::<AB>());
 
+    local.merkle_leaf_padding().map(|v| builder.assert_zero(v));
     builder.assert_one(next.is_merkle_path);
     next.level.eval_first_row(&mut builder);
     builder.assert_eq(next.epoch_dec, epoch);
-    local.merkle_leaf_padding().map(|v| builder.assert_zero(v));
+    zip!(next.merkle_parameter(), local.merkle_parameter_register())
+        .for_each(|(a, b)| builder.assert_eq(a, b));
     zip!(
         next.merkle_path_left(),
         next.merkle_path_right(),
@@ -297,6 +297,8 @@ where
 {
     let mut builder = builder.when(cols.is_merkle_path);
 
+    cols.level.eval_every_row(&mut builder);
+    builder.assert_bool(cols.is_right);
     cols.merkle_path_padding().map(|v| builder.assert_zero(v));
 }
 
@@ -316,6 +318,8 @@ fn eval_merkle_path_transition<AB>(
         next.epoch_dec.into().double() + local.is_right.into(),
         local.epoch_dec,
     );
+    zip!(next.merkle_parameter(), local.merkle_parameter())
+        .for_each(|(a, b)| builder.assert_eq(a, b));
     zip!(
         next.merkle_path_left(),
         next.merkle_path_right(),
@@ -337,14 +341,34 @@ fn eval_merkle_path_last_row<AB>(
 ) where
     AB: AirBuilder<F = F>,
 {
-    let mut builder =
-        builder.when(local.is_merkle_path.into() - local.is_merkle_path_transition.into());
+    let mut builder = builder.when(local.is_last_merkle_path_row::<AB>());
 
-    builder.assert_zero(next.is_merkle_leaf.into() + next.is_merkle_path.into());
-    zip!(local.root, local.compress_output::<AB>()).for_each(|(a, b)| builder.assert_eq(a, b));
-    builder
-        .when(next.is_msg)
-        .assert_eq(next.sig_idx, local.sig_idx + F::ONE);
+    builder.assert_eq(local.epoch_dec, local.is_right);
+    zip!(local.merkle_parameter(), next.msg_hash_parameter())
+        .for_each(|(a, b)| builder.assert_eq(a, b));
+}
+
+#[inline]
+fn eval_msg<AB>(
+    builder: &mut AB,
+    encoded_tweak_msg: [AB::Expr; TWEAK_FE_LEN],
+    encoded_msg: [AB::Expr; MSG_FE_LEN],
+    encoded_tweak_merkle_leaf: [AB::Expr; TWEAK_FE_LEN],
+    local: &MerkleTreeCols<AB::Var>,
+    next: &MerkleTreeCols<AB::Var>,
+) where
+    AB: AirBuilder<F = F>,
+{
+    let mut builder = builder.when(local.is_msg);
+
+    zip!(local.encoded_tweak_msg(), encoded_tweak_msg).for_each(|(a, b)| builder.assert_eq(a, b));
+    zip!(local.encoded_msg(), encoded_msg).for_each(|(a, b)| builder.assert_eq(a, b));
+    local.msg_hash_padding().map(|v| builder.assert_zero(v));
+    builder.assert_zero(next.is_msg.into() + next.is_merkle_path.into());
+
+    let mut builder = builder.when(next.is_merkle_leaf);
+    builder.assert_eq(next.sig_idx, local.sig_idx + F::ONE);
+    eval_merkle_leaf_first_row(&mut builder, encoded_tweak_merkle_leaf, next);
 }
 
 #[inline]
@@ -363,22 +387,25 @@ fn eval_padding_transition<AB>(
 }
 
 #[inline]
-fn receive_msg_hash<AB>(builder: &mut AB, local: &MerkleTreeCols<AB::Var>)
-where
+fn receive_merkle_root_and_msg_hash<AB>(
+    builder: &mut AB,
+    local: &MerkleTreeCols<AB::Var>,
+    next: &MerkleTreeCols<AB::Var>,
+) where
     AB: InteractionBuilder<F = F>,
 {
     builder.push_receive(
-        Bus::MsgHash as usize,
+        Bus::MerkleRootAndMsgHash as usize,
         iter::once(local.sig_idx.into())
-            .chain(local.msg_hash_parameter().map(Into::into))
-            .chain(local.root.map(Into::into))
-            .chain(local.msg_hash::<AB>()),
-        local.is_msg,
+            .chain(local.merkle_parameter().map(Into::into))
+            .chain(local.compress_output::<AB>())
+            .chain(next.msg_hash::<AB>()),
+        local.is_last_merkle_path_row::<AB>(),
     );
 }
 
 #[inline]
-fn receive_merkle_tree<AB>(
+fn receive_merkle_leaf<AB>(
     builder: &mut AB,
     local: &MerkleTreeCols<AB::Var>,
     next: &MerkleTreeCols<AB::Var>,
