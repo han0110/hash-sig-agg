@@ -64,6 +64,11 @@ hash-sig-testdata = { path = "../../hash-sig/hash-sig-testdata" }
 inherits = "release"
 debug-assertions = true
 
+[profile.bench]
+inherits = "release"
+lto = "fat"
+codegen-units = 1
+
 [patch."https://github.com/Plonky3/Plonky3.git"]
 p3-air = { git = "https://github.com/Plonky3//Plonky3.git", rev = "b0591e9" }
 p3-baby-bear = { git = "https://github.com/Plonky3//Plonky3.git", rev = "b0591e9" }

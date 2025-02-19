@@ -22,32 +22,6 @@ pub mod main;
 pub mod merkle_tree;
 pub mod range_check;
 
-/// A generic trait for types that can be borrowed from a `[T]` slice.
-pub trait AlignBorrow<T>: Sized {
-    /// The expected number of columns for this type.
-    const NUM_COLS: usize;
-
-    /// Aligns and borrows a reference.
-    fn align_borrow(slice: &[T]) -> &Self {
-        debug_assert_eq!(slice.len(), Self::NUM_COLS);
-        let (prefix, shorts, suffix) = unsafe { slice.align_to::<Self>() };
-        debug_assert!(prefix.is_empty(), "Alignment should match");
-        debug_assert!(suffix.is_empty(), "Alignment should match");
-        debug_assert_eq!(shorts.len(), 1);
-        &shorts[0]
-    }
-
-    /// Aligns and borrows a mutable reference.
-    fn align_borrow_mut(slice: &mut [T]) -> &mut Self {
-        debug_assert_eq!(slice.len(), Self::NUM_COLS);
-        let (prefix, shorts, suffix) = unsafe { slice.align_to_mut::<Self>() };
-        debug_assert!(prefix.is_empty(), "Alignment should match");
-        debug_assert!(suffix.is_empty(), "Alignment should match");
-        debug_assert_eq!(shorts.len(), 1);
-        &mut shorts[0]
-    }
-}
-
 #[repr(u8)]
 pub enum Bus {
     Parameter,

@@ -1,12 +1,10 @@
 use crate::{
     gadget::{cycle_bits::CycleBits, is_equal::IsEqualCols, is_zero::IsZeroCols},
     poseidon2::{
-        chip::{
-            decomposition::{F_MS_LIMB_BITS, LIMB_BITS, NUM_LIMBS, NUM_MSG_HASH_LIMBS},
-            AlignBorrow,
-        },
+        chip::decomposition::{F_MS_LIMB_BITS, LIMB_BITS, NUM_LIMBS, NUM_MSG_HASH_LIMBS},
         hash_sig::{CHUNK_SIZE, MSG_HASH_FE_LEN},
     },
+    util::AlignBorrow,
 };
 use core::{
     array::from_fn,
@@ -182,7 +180,7 @@ impl<T: Copy> DecompositionCols<T> {
 }
 
 impl<T> AlignBorrow<T> for DecompositionCols<T> {
-    const NUM_COLS: usize = NUM_DECOMPOSITION_COLS;
+    const SIZE: usize = NUM_DECOMPOSITION_COLS;
 }
 
 impl<T> Borrow<DecompositionCols<T>> for [T] {

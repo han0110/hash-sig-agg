@@ -1,6 +1,5 @@
+use crate::util::AlignBorrow;
 use core::borrow::{Borrow, BorrowMut};
-
-use crate::poseidon2::chip::AlignBorrow;
 
 pub const NUM_RANGE_CHECK_COLS: usize = size_of::<RangeCheckCols<u8>>();
 
@@ -11,7 +10,7 @@ pub struct RangeCheckCols<T> {
 }
 
 impl<T> AlignBorrow<T> for RangeCheckCols<T> {
-    const NUM_COLS: usize = NUM_RANGE_CHECK_COLS;
+    const SIZE: usize = NUM_RANGE_CHECK_COLS;
 }
 
 impl<T> Borrow<RangeCheckCols<T>> for [T] {

@@ -1,16 +1,14 @@
 use crate::{
     gadget::{cycle_int::CycleInt, not},
     poseidon2::{
-        chip::{
-            merkle_tree::poseidon2::{PARTIAL_ROUNDS, WIDTH},
-            AlignBorrow,
-        },
+        chip::merkle_tree::poseidon2::{PARTIAL_ROUNDS, WIDTH},
         hash_sig::{
             HASH_FE_LEN, LOG_LIFETIME, MSG_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN, RHO_FE_LEN,
             SPONGE_INPUT_SIZE, SPONGE_PERM, SPONGE_RATE, TWEAK_FE_LEN,
         },
         HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
+    util::AlignBorrow,
 };
 use core::{
     array::from_fn,
@@ -207,7 +205,7 @@ impl<T: Copy> MerkleTreeCols<T> {
 }
 
 impl<T> AlignBorrow<T> for MerkleTreeCols<T> {
-    const NUM_COLS: usize = NUM_MERKLE_TREE_COLS;
+    const SIZE: usize = NUM_MERKLE_TREE_COLS;
 }
 
 impl<T> Borrow<MerkleTreeCols<T>> for [T] {

@@ -1,9 +1,7 @@
 use crate::{
     gadget::lower_rows_filter::LowerRowsFilterCols,
-    poseidon2::{
-        chip::AlignBorrow,
-        hash_sig::{HASH_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN},
-    },
+    poseidon2::hash_sig::{HASH_FE_LEN, MSG_HASH_FE_LEN, PARAM_FE_LEN},
+    util::AlignBorrow,
 };
 use core::borrow::{Borrow, BorrowMut};
 
@@ -19,7 +17,7 @@ pub struct MainCols<T> {
 }
 
 impl<T> AlignBorrow<T> for MainCols<T> {
-    const NUM_COLS: usize = NUM_MAIN_COLS;
+    const SIZE: usize = NUM_MAIN_COLS;
 }
 
 impl<T> Borrow<MainCols<T>> for [T] {

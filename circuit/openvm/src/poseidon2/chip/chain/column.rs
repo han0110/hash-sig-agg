@@ -4,16 +4,14 @@ use crate::{
         strictly_increasing::StrictlyIncreasingCols,
     },
     poseidon2::{
-        chip::{
-            chain::{
-                poseidon2::{PARTIAL_ROUNDS, WIDTH},
-                MAX_CHAIN_STEP_DIFF_BITS,
-            },
-            AlignBorrow,
+        chip::chain::{
+            poseidon2::{PARTIAL_ROUNDS, WIDTH},
+            MAX_CHAIN_STEP_DIFF_BITS,
         },
         hash_sig::{CHUNK_SIZE, HASH_FE_LEN, PARAM_FE_LEN, TARGET_SUM, TWEAK_FE_LEN},
         HALF_FULL_ROUNDS, SBOX_DEGREE, SBOX_REGISTERS,
     },
+    util::AlignBorrow,
 };
 use core::{
     array::from_fn,
@@ -132,7 +130,7 @@ impl<T: Copy> ChainCols<T> {
 }
 
 impl<T> AlignBorrow<T> for ChainCols<T> {
-    const NUM_COLS: usize = NUM_CHAIN_COLS;
+    const SIZE: usize = NUM_CHAIN_COLS;
 }
 
 impl<T> Borrow<ChainCols<T>> for [T] {
