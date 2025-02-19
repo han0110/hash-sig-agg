@@ -1,4 +1,4 @@
-use crate::{gadget::not, util::MaybeUninitField};
+use crate::{gadget::not, util::field::MaybeUninitField};
 use core::{mem::MaybeUninit, ops::Deref};
 use p3_air::AirBuilder;
 use p3_field::Field;

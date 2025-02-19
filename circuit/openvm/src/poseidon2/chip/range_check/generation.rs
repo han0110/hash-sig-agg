@@ -6,7 +6,7 @@ use crate::{
         },
         F,
     },
-    util::{par_zip, MaybeUninitField},
+    util::{field::MaybeUninitField, par_zip},
 };
 use core::mem::MaybeUninit;
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};

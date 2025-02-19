@@ -7,7 +7,10 @@ use crate::{
         hash_sig::{VerificationTrace, CHUNK_SIZE, NUM_CHUNKS, TARGET_SUM},
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC16, SBOX_DEGREE, SBOX_REGISTERS,
     },
-    util::{par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
+    util::{
+        field::{MaybeUninitField, MaybeUninitFieldSlice},
+        par_zip, zip,
+    },
 };
 use core::mem::MaybeUninit;
 use itertools::Itertools;

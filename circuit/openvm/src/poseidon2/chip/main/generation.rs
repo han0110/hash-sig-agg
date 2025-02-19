@@ -4,7 +4,7 @@ use crate::{
         hash_sig::VerificationTrace,
         F,
     },
-    util::{MaybeUninitField, MaybeUninitFieldSlice},
+    util::field::{MaybeUninitField, MaybeUninitFieldSlice},
 };
 use core::mem::MaybeUninit;
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};

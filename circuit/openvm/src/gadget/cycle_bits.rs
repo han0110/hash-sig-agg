@@ -1,4 +1,4 @@
-use crate::{gadget::not, util::MaybeUninitFieldSlice};
+use crate::{gadget::not, util::field::MaybeUninitFieldSlice};
 use core::{
     mem::MaybeUninit,
     ops::{Deref, DerefMut},

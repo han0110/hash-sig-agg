@@ -8,7 +8,10 @@ use crate::{
         hash_sig::{VerificationTrace, CHUNK_SIZE, MSG_HASH_FE_LEN},
         F,
     },
-    util::{par_zip, MaybeUninitField, MaybeUninitFieldSlice},
+    util::{
+        field::{MaybeUninitField, MaybeUninitFieldSlice},
+        par_zip,
+    },
 };
 use core::{array::from_fn, iter::repeat_with, mem::MaybeUninit};
 use itertools::Itertools;

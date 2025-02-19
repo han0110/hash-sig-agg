@@ -10,7 +10,11 @@ use crate::{
         },
         Poseidon2LinearLayers, F, HALF_FULL_ROUNDS, RC24, SBOX_DEGREE, SBOX_REGISTERS,
     },
-    util::{concat_array, par_zip, zip, MaybeUninitField, MaybeUninitFieldSlice},
+    util::{
+        concat_array,
+        field::{MaybeUninitField, MaybeUninitFieldSlice},
+        par_zip, zip,
+    },
 };
 use core::{array::from_fn, iter, mem::MaybeUninit};
 use p3_field::FieldAlgebra;

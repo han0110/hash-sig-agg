@@ -14,6 +14,7 @@ use openvm_stark_backend::{
 use p3_commit::PolynomialSpace;
 use p3_maybe_rayon::prelude::*;
 use range_check::RangeCheckChip;
+use tracing::instrument;
 
 pub mod chain;
 pub mod decomposition;
@@ -57,6 +58,7 @@ pub enum Bus {
     RangeCheck,
 }
 
+#[instrument(name = "generate hash-sig aggregation traces", skip_all)]
 pub fn generate_air_proof_inputs<SC: StarkGenericConfig>(
     extra_capacity_bits: usize,
     vi: VerificationInput,
@@ -111,15 +113,17 @@ where
 mod test {
     use crate::{
         poseidon2::{chip::generate_air_proof_inputs, hash_sig::test::mock_vi, E, F},
-        test::run,
+        util::engine::Engine,
     };
+    use openvm_stark_sdk::engine::StarkEngine;
 
     #[test]
     fn chip() {
+        let engine = Engine::<F, E>::fastest();
         for log_sigs in 4..8 {
             let vi = mock_vi(1 << log_sigs);
-            let (airs, inputs) = generate_air_proof_inputs(1, vi);
-            run::<F, E>(airs, inputs).unwrap();
+            let (airs, air_proof_inputs) = generate_air_proof_inputs(engine.log_blowup(), vi);
+            engine.run_test_impl(airs, air_proof_inputs).unwrap();
         }
     }
 }

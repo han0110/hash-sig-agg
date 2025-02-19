@@ -1,4 +1,4 @@
-use crate::util::{MaybeUninitField, MaybeUninitFieldSlice};
+use crate::util::field::{MaybeUninitField, MaybeUninitFieldSlice};
 use core::{mem::MaybeUninit, ops::Deref};
 use itertools::Itertools;
 use p3_air::AirBuilder;

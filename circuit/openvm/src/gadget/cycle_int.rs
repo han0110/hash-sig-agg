@@ -1,6 +1,6 @@
 use crate::{
     gadget::{is_equal::IsEqualCols, not},
-    util::MaybeUninitField,
+    util::field::MaybeUninitField,
 };
 use core::mem::MaybeUninit;
 use p3_air::AirBuilder;
