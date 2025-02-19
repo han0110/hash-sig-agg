@@ -550,6 +550,7 @@ dependencies = [
  "p3-dft",
  "p3-field",
  "p3-fri",
+ "p3-keccak",
  "p3-koala-bear",
  "p3-matrix",
  "p3-maybe-rayon 0.1.0 (git+https://github.com/Plonky3//Plonky3.git)",
@@ -1106,12 +1107,12 @@ dependencies = [
 [[package]]
 name = "p3-keccak"
 version = "0.1.0"
-source = "git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
+source = "git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9#b0591e9b82d58d10f86359875b5d5fa96433b4cf"
 dependencies = [
  "itertools 0.13.0",
  "p3-field",
  "p3-symmetric",
- "p3-util 0.1.0 (git+https://github.com/Plonky3/Plonky3.git?rev=b0591e9)",
+ "p3-util 0.1.0 (git+https://github.com/Plonky3//Plonky3.git?rev=b0591e9)",
  "tiny-keccak",
 ]
 

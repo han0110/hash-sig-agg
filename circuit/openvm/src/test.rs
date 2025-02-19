@@ -2,19 +2,27 @@ use openvm_stark_backend::{
     config::StarkConfig, engine::VerificationData, interaction::fri_log_up::FriLogUpPhase,
     prover::types::AirProofInput, verifier::VerificationError, AirRef,
 };
-use openvm_stark_sdk::{engine::StarkEngine, p3_keccak::Keccak256Hash};
+use openvm_stark_sdk::engine::StarkEngine;
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{ExtensionField, PrimeField32, TwoAdicField};
 use p3_fri::{FriConfig, TwoAdicFriPcs};
+use p3_keccak::{Keccak256Hash, KeccakF};
 use p3_merkle_tree::MerkleTreeMmcs;
-use p3_symmetric::{CompressionFunctionFromHasher, SerializingHasher32};
+use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
 
 type ByteHash = Keccak256Hash;
-type LeafHash = SerializingHasher32<ByteHash>;
-type Compression = CompressionFunctionFromHasher<ByteHash, 2, 32>;
-type ValMmcs<Val> = MerkleTreeMmcs<Val, u8, LeafHash, Compression, 32>;
+type U64Hash = PaddingFreeSponge<KeccakF, 25, 17, 4>;
+type FieldHash = SerializingHasher32To64<U64Hash>;
+type MyCompress = CompressionFunctionFromHasher<U64Hash, 2, 4>;
+type ValMmcs<Val> = MerkleTreeMmcs<
+    [Val; p3_keccak::VECTOR_LEN],
+    [u64; p3_keccak::VECTOR_LEN],
+    FieldHash,
+    MyCompress,
+    4,
+>;
 type ChallengeMmcs<Val, Challenge> = ExtensionMmcs<Val, Challenge, ValMmcs<Val>>;
 type Challenger<Val> = SerializingChallenger32<Val, HashChallenger<u8, ByteHash, 32>>;
 type Dft<Val> = Radix2DitParallel<Val>;
@@ -34,17 +42,18 @@ where
     Challenge: TwoAdicField + ExtensionField<Val>,
 {
     fn new() -> Self {
-        let byte_hash = ByteHash {};
-        let leaf_hash = LeafHash::new(byte_hash);
-        let compress = Compression::new(byte_hash);
-        let val_mmcs = ValMmcs::new(leaf_hash, compress);
+        let u64_hash = U64Hash::new(KeccakF {});
+        let field_hash = FieldHash::new(u64_hash);
+        let compress = MyCompress::new(u64_hash);
+        let val_mmcs = ValMmcs::new(field_hash, compress);
         let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
         let dft = Dft::default();
         let log_blowup = 1;
+        let num_queries = 256usize.div_ceil(log_blowup);
         let fri_config = FriConfig {
             log_blowup,
-            log_final_poly_len: 0,
-            num_queries: 256usize.div_ceil(log_blowup),
+            log_final_poly_len: 3,
+            num_queries,
             proof_of_work_bits: 0,
             mmcs: challenge_mmcs,
         };

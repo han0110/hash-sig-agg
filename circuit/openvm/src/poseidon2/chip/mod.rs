@@ -116,7 +116,7 @@ mod test {
 
     #[test]
     fn chip() {
-        for log_sigs in 0..8 {
+        for log_sigs in 4..8 {
             let vi = mock_vi(1 << log_sigs);
             let (airs, inputs) = generate_air_proof_inputs(1, vi);
             run::<F, E>(airs, inputs).unwrap();
