@@ -1,5 +1,5 @@
 use clap::Parser;
-use core::iter::zip;
+use core::{fmt::Write, iter::zip};
 use hash_sig_agg_circuit_openvm::{
     poseidon2::{chip::generate_air_proof_inputs, E, F},
     util::engine::Engine,
@@ -93,50 +93,34 @@ fn proving_time_parts(proving: Duration, witgen: Duration, snapshot: Snapshot) -
     #[allow(clippy::mutable_key_type)]
     let snapshot = snapshot.into_hashmap();
 
-    let part = |name| {
-        let key = CompositeKey::new(MetricKind::Gauge, Key::from_name(name));
+    let metric = |key_name| {
+        let key = CompositeKey::new(MetricKind::Gauge, Key::from_name(key_name));
         match snapshot[&key].2 {
             #[allow(clippy::cast_sign_loss)]
             DebugValue::Gauge(value) => Duration::from_millis(value.0 as u64),
             _ => unreachable!(),
         }
     };
-    let [commit_main, compute_perm, commit_perm, compute_quot, commit_quot, opening] = [
-        "main_trace_commit_time_ms",
-        "generate_perm_trace_time_ms",
-        "perm_trace_commit_time_ms",
-        "quotient_poly_compute_time_ms",
-        "quotient_poly_commit_time_ms",
-        "pcs_opening_time_ms",
-    ]
-    .map(part);
 
-    let rest = proving
-        - (witgen
-            + commit_main
-            + compute_perm
-            + commit_perm
-            + compute_quot
-            + commit_quot
-            + opening);
+    let mut parts = vec![("witgen", witgen)];
+    parts.extend(
+        [
+            ("commit_main", "main_trace_commit_time_ms"),
+            ("compute_perm", "generate_perm_trace_time_ms"),
+            ("commit_perm", "perm_trace_commit_time_ms"),
+            ("compute_quot", "quotient_poly_compute_time_ms"),
+            ("commit_quot", "quotient_poly_commit_time_ms"),
+            ("opening", "pcs_opening_time_ms"),
+        ]
+        .map(|(name, key_name)| (name, metric(key_name))),
+    );
+    parts.push(("rest", proving - parts.iter().map(|(_, time)| time).sum()));
 
-    let ratio = |n: Duration| 100.0 * n.as_secs_f64() / proving.as_secs_f64();
-    format!(
-        r"  witgen: {witgen:.2?} ({:02.2}%)
-  commit_main: {commit_main:?} ({:02.2}%)
-  compute_perm: {compute_perm:?} ({:02.2}%)
-  commit_perm: {commit_perm:?} ({:02.2}%)
-  compute_quot: {compute_quot:?} ({:02.2}%)
-  commit_quot: {commit_quot:?} ({:02.2}%)
-  opening: {opening:?} ({:02.2}%)
-  rest: {rest:.2?} ({:02.2}%)",
-        ratio(witgen),
-        ratio(commit_main),
-        ratio(compute_perm),
-        ratio(commit_perm),
-        ratio(compute_quot),
-        ratio(commit_quot),
-        ratio(opening),
-        ratio(rest)
-    )
+    let ratio = |time: Duration| 100.0 * time.as_secs_f64() / proving.as_secs_f64();
+    let mut s = String::new();
+    for (idx, (name, time)) in parts.into_iter().enumerate() {
+        s.extend((idx > 0).then_some('\n'));
+        write!(&mut s, "  {name}: {time:.2?} ({:02.2}%)", ratio(time)).unwrap();
+    }
+    s
 }
