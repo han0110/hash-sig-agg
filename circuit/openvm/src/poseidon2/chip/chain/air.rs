@@ -13,6 +13,7 @@ use crate::{
     util::zip,
 };
 use core::{borrow::Borrow, iter};
+use itertools::Itertools;
 use openvm_stark_backend::{
     air_builders::sub::SubAirBuilder,
     interaction::InteractionBuilder,
@@ -120,6 +121,13 @@ where
     cols.is_active.eval_every_row(builder);
     cols.sig_step.eval_every_row(builder);
     cols.chain_step_bits.map(|bit| builder.assert_bool(bit));
+    builder.assert_zero(
+        cols.chain_step_bits
+            .iter()
+            .copied()
+            .map_into()
+            .product::<AB::Expr>(),
+    );
     cols.chain_idx.eval_every_row(builder);
     builder.assert_bool(cols.is_x_i);
     cols.padding().map(|v| builder.assert_zero(v));
