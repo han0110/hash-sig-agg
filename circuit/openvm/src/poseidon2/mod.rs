@@ -1,7 +1,7 @@
 pub mod chip;
 pub mod hash_sig;
 
-pub use baby_bear::*;
+pub use koala_bear::*;
 
 pub mod baby_bear {
     pub use hash_sig_verifier::instantiation::poseidon2::baby_bear_horizon::BabyBearHorizon as Poseidon2Parameter;
