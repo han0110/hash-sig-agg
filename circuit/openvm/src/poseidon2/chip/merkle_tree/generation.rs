@@ -199,7 +199,7 @@ fn generate_trace_rows_path(
             }
             let input = concat_array![
                 trace.pk.parameter,
-                encode_tweak_merkle_tree(level as u32 + 1, epoch_dec >> 1),
+                encode_tweak_merkle_tree(level as u8 + 1, epoch_dec >> 1),
                 if is_right {
                     [sibling, node].into_iter().flatten()
                 } else {

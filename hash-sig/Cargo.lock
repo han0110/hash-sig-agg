@@ -361,6 +361,7 @@ dependencies = [
 name = "hash-sig-verifier"
 version = "0.1.0"
 dependencies = [
+ "hashsig",
  "num-bigint",
  "p3-baby-bear",
  "p3-field",
@@ -372,6 +373,17 @@ dependencies = [
  "serde",
  "serde-big-array",
  "sha3",
+]
+
+[[package]]
+name = "hashsig"
+version = "0.1.0"
+source = "git+https://github.com/han0110/hash-sig?branch=feature%2Falt-tweak-encoding#cbdf69ea68a246c4912cf7ff84c633b5d9262518"
+dependencies = [
+ "num-bigint",
+ "rand",
+ "sha3",
+ "zkhash",
 ]
 
 [[package]]

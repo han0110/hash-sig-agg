@@ -88,7 +88,7 @@ where
         one_time_pk: [Self::Hash; NUM_CHUNKS],
         merkle_siblings: [Self::Hash; LOG_LIFETIME],
     ) -> Self::Hash {
-        zip(1u32.., merkle_siblings).fold(
+        zip(1.., merkle_siblings).fold(
             P::sponge::<SPONGE_INPUT_SIZE, HASH_FE_LEN>(concat_array![
                 parameter,
                 encode_tweak_merkle_tree(0, epoch),
@@ -170,18 +170,25 @@ pub fn encode_msg<F: PrimeField32>(msg: [u8; MSG_LEN]) -> [F; MSG_FE_LEN] {
 }
 
 pub fn encode_tweak_chain<F: PrimeField32>(epoch: u32, i: u16, k: u16) -> [F; TWEAK_FE_LEN] {
-    const SEP: u64 = 0x00;
-    decompose((u64::from(epoch) << 40) | (u64::from(i) << 24) | (u64::from(k) << 8) | SEP)
+    const SEP: u32 = 0x00;
+    [
+        F::from_canonical_u32((epoch << 2) | SEP),
+        F::from_canonical_u32((u32::from(i) << 16) | u32::from(k)),
+    ]
 }
 
-pub fn encode_tweak_merkle_tree<F: PrimeField32>(l: u32, i: u32) -> [F; TWEAK_FE_LEN] {
-    const SEP: u64 = 0x01;
-    decompose((u64::from(l) << 40) | (u64::from(i) << 8) | SEP)
+pub fn encode_tweak_merkle_tree<F: PrimeField32>(l: u8, i: u32) -> [F; TWEAK_FE_LEN] {
+    const SEP: u32 = 0x01;
+    [
+        F::from_canonical_u32((u32::from(l) << 2) | SEP),
+        F::from_canonical_u32(i),
+    ]
 }
 
 pub fn encode_tweak_msg<F: PrimeField32>(epoch: u32) -> [F; TWEAK_FE_LEN] {
     const SEP: u32 = 0x02;
-    [F::from_canonical_u32(epoch << 8 | SEP), F::ZERO] // `decompose(((epoch as u64) << 8) | SEP)`.
+    const { assert!(LOG_LIFETIME < 28) };
+    [F::from_canonical_u32(epoch << 2 | SEP), F::ZERO]
 }
 
 pub fn decompose<F: PrimeField32, const N: usize>(big: impl Into<BigUint>) -> [F; N] {
@@ -191,4 +198,55 @@ pub fn decompose<F: PrimeField32, const N: usize>(big: impl Into<BigUint>) -> [F
         big /= BigUint::from(F::ORDER_U32);
         F::from_canonical_u32(rem.iter_u32_digits().next().unwrap_or_default())
     })
+}
+
+#[cfg(test)]
+mod test {
+    use crate::{
+        instantiation::{
+            poseidon2::{baby_bear_horizon::BabyBearHorizon, Poseidon2TargetSum},
+            Instantiation,
+        },
+        PublicKey, Signature, LOG_LIFETIME,
+    };
+    use core::array::from_fn;
+    use hashsig::signature::{
+        generalized_xmss::instantiations_poseidon::lifetime_2_to_the_20::target_sum::SIGTargetSumLifetime20W2NoOff,
+        SignatureScheme,
+    };
+    use num_bigint::BigUint;
+    use p3_baby_bear::BabyBear;
+    use p3_field::FieldAlgebra;
+    use rand::{thread_rng, Rng};
+
+    #[test]
+    fn consistency() {
+        type HashSig = SIGTargetSumLifetime20W2NoOff;
+        type HashSigVerifier = Poseidon2TargetSum<BabyBearHorizon>;
+
+        let ark_to_p3 = |v| BabyBear::from_canonical_u32(u32::try_from(BigUint::from(v)).unwrap());
+
+        let mut rng = thread_rng();
+        let (pk, sk) = HashSig::gen(&mut rng);
+        for _ in 0..100 {
+            let epoch = rng.gen_range(0..1 << LOG_LIFETIME);
+            let msg = rng.gen();
+            let sig = HashSig::sign(&mut rng, &sk, epoch, &msg).unwrap();
+            assert!(HashSig::verify(&pk, epoch, &msg, &sig));
+            assert!(HashSigVerifier::verify(
+                epoch,
+                msg,
+                PublicKey {
+                    parameter: pk.parameter().map(ark_to_p3),
+                    merkle_root: pk.root().map(ark_to_p3),
+                },
+                Signature {
+                    rho: sig.rho().map(ark_to_p3),
+                    one_time_sig: from_fn(|i| sig.hashes()[i].map(ark_to_p3)),
+                    merkle_siblings: from_fn(|i| sig.path().co_path()[i].map(ark_to_p3)),
+                }
+            )
+            .is_ok());
+        }
+    }
 }
