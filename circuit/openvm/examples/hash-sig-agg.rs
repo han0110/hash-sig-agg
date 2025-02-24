@@ -78,14 +78,16 @@ fn main() {
     let verifying_time = start.elapsed();
 
     let throughput = f64::from(1 << args.log_signatures) / proving_time.as_secs_f64();
-    let proof_size_mb = (bincode::serialize(&proof).unwrap().len() as f64) / 1024f64 / 1024f64;
+    let proving_time = human_time(proving_time);
+    let proof_size = human_size(bincode::serialize(&proof).unwrap().len());
+    let verifying_time = human_time(verifying_time);
 
     println!(
-        r"proving time: {proving_time:.2?}
+        r"proving time: {proving_time}
 {proving_time_parts}
-throughput: {throughput:.2} sigs/s
-proof_size: {proof_size_mb:.2} MB
-verifying time: {verifying_time:.2?}",
+throughput: {throughput:.2} sig/s
+proof_size: {proof_size}
+verifying time: {verifying_time}",
     );
 }
 
@@ -120,7 +122,32 @@ fn proving_time_parts(proving: Duration, witgen: Duration, snapshot: Snapshot) -
     let mut s = String::new();
     for (idx, (name, time)) in parts.into_iter().enumerate() {
         s.extend((idx > 0).then_some('\n'));
-        write!(&mut s, "  {name}: {time:.2?} ({:02.2}%)", ratio(time)).unwrap();
+        let ratio = ratio(time);
+        let time = human_time(time);
+        write!(&mut s, "  {name}: {time} ({ratio:.2}%)",).unwrap();
     }
     s
+}
+
+fn human_time(time: Duration) -> String {
+    let time = time.as_nanos();
+    if time < 1_000 {
+        format!("{time} ns")
+    } else if time < 1_000_000 {
+        format!("{:.2} µs", time as f64 / 1_000.0)
+    } else if time < 1_000_000_000 {
+        format!("{:.2} ms", time as f64 / 1_000_000.0)
+    } else {
+        format!("{:.2} s", time as f64 / 1_000_000_000.0)
+    }
+}
+
+pub fn human_size(size: usize) -> String {
+    if size < 1 << 10 {
+        format!("{size} B")
+    } else if size < 1 << 20 {
+        format!("{:.2} kB", size as f64 / 2f64.powi(10))
+    } else {
+        format!("{:.2} MB", size as f64 / 2f64.powi(20))
+    }
 }
