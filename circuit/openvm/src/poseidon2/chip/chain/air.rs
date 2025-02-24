@@ -52,7 +52,11 @@ impl BaseAir<F> for ChainAir {
 
 impl PartitionedBaseAir<F> for ChainAir {}
 
-impl BaseAirWithPublicValues<F> for ChainAir {}
+impl BaseAirWithPublicValues<F> for ChainAir {
+    fn num_public_values(&self) -> usize {
+        1
+    }
+}
 
 impl<AB> Air<AB> for ChainAir
 where
@@ -73,8 +77,7 @@ where
                     >(),
             ));
 
-        // TODO:
-        // 1. Make sure `encoded_tweak_chain` is correct.
+        let encoded_tweak_chain_first = builder.public_values()[0].into();
 
         let main = builder.main();
         let local = main.row_slice(0);
@@ -83,7 +86,7 @@ where
         let next: &ChainCols<AB::Var> = (*next).borrow();
 
         // When every rows
-        eval_every_row(builder, local);
+        eval_every_row(builder, encoded_tweak_chain_first, local);
 
         // When first row
         {
@@ -114,8 +117,11 @@ where
 }
 
 #[inline]
-fn eval_every_row<AB>(builder: &mut AB, cols: &ChainCols<AB::Var>)
-where
+fn eval_every_row<AB>(
+    builder: &mut AB,
+    encoded_tweak_chain_first: AB::Expr,
+    cols: &ChainCols<AB::Var>,
+) where
     AB: AirBuilder<F = F>,
 {
     cols.is_active.eval_every_row(builder);
@@ -131,6 +137,16 @@ where
     cols.chain_idx.eval_every_row(builder);
     builder.assert_bool(cols.is_x_i);
     cols.padding().map(|v| builder.assert_zero(v));
+    zip!(
+        cols.encoded_tweak_chain(),
+        [
+            encoded_tweak_chain_first,
+            *cols.chain_idx * AB::Expr::from_wrapped_u32(1 << 16)
+                + cols.chain_step::<AB>()
+                + F::ONE
+        ]
+    )
+    .for_each(|(a, b)| builder.when(*cols.is_active).assert_eq(a, b));
 }
 
 #[inline]
@@ -195,12 +211,12 @@ fn eval_chain_transition<AB>(
     let mut builder =
         builder.when(local.is_sig_transition::<AB>() * not(local.is_last_chain_step::<AB>()));
 
+    builder.assert_zero(next.is_x_i);
     builder.assert_eq(*next.chain_idx, *local.chain_idx);
     builder.assert_eq(
         next.chain_step::<AB>(),
         local.chain_step::<AB>() + AB::Expr::ONE,
     );
-    builder.assert_zero(next.is_x_i);
     zip!(next.chain_input(), local.compression_output::<AB>())
         .for_each(|(a, b)| builder.assert_eq(a, b));
 }

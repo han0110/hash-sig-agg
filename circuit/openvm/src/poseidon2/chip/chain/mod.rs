@@ -12,6 +12,7 @@ use openvm_stark_backend::{
     Chip, ChipUsageGetter,
 };
 use p3_commit::PolynomialSpace;
+use p3_field::FieldAlgebra;
 use std::sync::Arc;
 
 const MAX_CHAIN_STEP_DIFF_BITS: usize = (NUM_CHUNKS / 2).next_power_of_two().ilog2() as usize;
@@ -29,14 +30,16 @@ mod poseidon2 {
 pub struct ChainChip<'a> {
     air: Arc<ChainAir>,
     extra_capacity_bits: usize,
+    epoch: u32,
     traces: &'a [VerificationTrace],
 }
 
 impl<'a> ChainChip<'a> {
-    pub fn new(extra_capacity_bits: usize, traces: &'a [VerificationTrace]) -> Self {
+    pub fn new(extra_capacity_bits: usize, epoch: u32, traces: &'a [VerificationTrace]) -> Self {
         Self {
             air: Default::default(),
             extra_capacity_bits,
+            epoch,
             traces,
         }
     }
@@ -70,7 +73,7 @@ where
             raw: AirProofRawInput {
                 cached_mains: Vec::new(),
                 common_main: Some(generate_trace_rows(self.extra_capacity_bits, self.traces)),
-                public_values: Vec::new(),
+                public_values: vec![F::from_canonical_u32(self.epoch << 2)],
             },
         }
     }

@@ -47,7 +47,7 @@ where
         .map(|(pk, sig)| VerificationTrace::generate(vi.epoch, encoded_msg, pk, sig))
         .collect::<Vec<_>>();
     let main = MainChip::new(extra_capacity_bits, &traces);
-    let chain = ChainChip::new(extra_capacity_bits, &traces);
+    let chain = ChainChip::new(extra_capacity_bits, vi.epoch, &traces);
     let merkle_tree = MerkleTreeChip::new(extra_capacity_bits, vi.epoch, encoded_msg, &traces);
     let decomposition = DecompositionChip::new(extra_capacity_bits, &traces);
     let ((main_api, chain_api), (merkle_tree_api, (decomposition_api, range_check_mult))) = join(
