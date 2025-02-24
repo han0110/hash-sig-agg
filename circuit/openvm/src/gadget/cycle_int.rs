@@ -2,7 +2,7 @@ use crate::{
     gadget::{is_equal::IsEqualCols, not},
     util::field::MaybeUninitField,
 };
-use core::mem::MaybeUninit;
+use core::{mem::MaybeUninit, ops::Deref};
 use p3_air::AirBuilder;
 use p3_field::{Field, FieldAlgebra};
 
@@ -11,6 +11,15 @@ use p3_field::{Field, FieldAlgebra};
 pub struct CycleInt<T, const N: usize> {
     pub step: T,
     pub is_last_step: IsEqualCols<T>,
+}
+
+impl<T, const N: usize> Deref for CycleInt<T, N> {
+    type Target = T;
+
+    #[inline]
+    fn deref(&self) -> &Self::Target {
+        &self.step
+    }
 }
 
 impl<T: Field, const N: usize> CycleInt<MaybeUninit<T>, N> {

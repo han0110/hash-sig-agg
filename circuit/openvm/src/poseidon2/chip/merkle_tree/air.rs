@@ -310,7 +310,22 @@ fn eval_merkle_path_transition<AB>(
 ) where
     AB: AirBuilder<F = F>,
 {
-    let mut builder = builder.when(local.is_merkle_path_transition);
+    let mut builder = builder.when(local.is_merkle_path);
+
+    zip!(
+        local.encoded_tweak_merkle(),
+        [
+            (*local.level + F::ONE) * AB::Expr::from_canonical_u32(1 << 2) + F::ONE,
+            select(
+                local.is_merkle_path_transition.into(),
+                AB::Expr::ZERO,
+                next.epoch_dec.into()
+            )
+        ]
+    )
+    .for_each(|(a, b)| builder.assert_eq(a, b));
+
+    let mut builder = builder.inner.when(local.is_merkle_path_transition);
 
     builder.assert_one(next.is_merkle_path);
     local.level.eval_transition(&mut builder, &next.level);
