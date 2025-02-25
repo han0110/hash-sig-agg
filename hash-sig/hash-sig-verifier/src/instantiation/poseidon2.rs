@@ -188,7 +188,7 @@ pub fn encode_tweak_merkle_tree<F: PrimeField32>(l: u8, i: u32) -> [F; TWEAK_FE_
 pub fn encode_tweak_msg<F: PrimeField32>(epoch: u32) -> [F; TWEAK_FE_LEN] {
     const SEP: u32 = 0x02;
     const { assert!(LOG_LIFETIME < 28) };
-    [F::from_canonical_u32(epoch << 2 | SEP), F::ZERO]
+    [F::from_canonical_u32((epoch << 2) | SEP), F::ZERO]
 }
 
 pub fn decompose<F: PrimeField32, const N: usize>(big: impl Into<BigUint>) -> [F; N] {

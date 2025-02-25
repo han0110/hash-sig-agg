@@ -150,5 +150,5 @@ fn encode_tweak_msg(epoch: u32) -> [u8; 5] {
 
 fn msg_hash_to_chunks(bytes: [u8; MSG_HASH_LEN]) -> [u16; NUM_CHUNKS] {
     const MASK: u8 = ((1 << CHUNK_SIZE) - 1) as u8;
-    from_fn(|i| (bytes[(i * CHUNK_SIZE) / 8] >> ((i * CHUNK_SIZE) % 8) & MASK).into())
+    from_fn(|i| ((bytes[(i * CHUNK_SIZE) / 8] >> ((i * CHUNK_SIZE) % 8)) & MASK).into())
 }
