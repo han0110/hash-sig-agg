@@ -7,6 +7,9 @@ pub mod is_zero;
 pub mod lower_rows_filter;
 pub mod strictly_increasing;
 
+#[cfg(test)]
+mod test_utils;
+
 pub fn not<F: FieldAlgebra>(value: F) -> F {
     F::ONE - value
 }
