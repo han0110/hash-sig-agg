@@ -31,8 +31,8 @@ impl Poseidon2Parameter for KoalaBearHorizon {
 #[cfg(test)]
 mod test {
     use crate::instantiation::poseidon2::{
-        decompose, koala_bear_horizon::KoalaBearHorizon, Poseidon2Parameter, HASH_FE_LEN,
-        NUM_CHUNKS, PARAM_FE_LEN, SPONGE_CAPACITY, TWEAK_FE_LEN,
+        HASH_FE_LEN, NUM_CHUNKS, PARAM_FE_LEN, Poseidon2Parameter, SPONGE_CAPACITY, TWEAK_FE_LEN,
+        decompose, koala_bear_horizon::KoalaBearHorizon,
     };
     use num_bigint::BigUint;
     use p3_koala_bear::KoalaBear;

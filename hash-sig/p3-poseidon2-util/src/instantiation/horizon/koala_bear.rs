@@ -1,8 +1,7 @@
 use crate::instantiation::horizon::{
-    koala_bear::constant::{RC16, RC24, SBOX_DEGREE},
     Poseidon2ExternalLayerHorizon, Poseidon2InternalLayerHorizon,
+    koala_bear::constant::{RC16, RC24, SBOX_DEGREE},
 };
-use p3_field::Field;
 use p3_koala_bear::KoalaBear;
 use p3_poseidon2::{ExternalLayerConstants, Poseidon2};
 use std::sync::LazyLock;
@@ -10,7 +9,7 @@ use std::sync::LazyLock;
 pub mod constant;
 
 pub type Poseidon2KoalaBearHorizon<const WIDTH: usize> = Poseidon2<
-    <KoalaBear as Field>::Packing,
+    KoalaBear,
     Poseidon2ExternalLayerHorizon<KoalaBear, WIDTH, SBOX_DEGREE>,
     Poseidon2InternalLayerHorizon<KoalaBear, WIDTH, SBOX_DEGREE>,
     WIDTH,

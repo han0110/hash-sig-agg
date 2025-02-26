@@ -1,8 +1,8 @@
-use crate::{concat_array, instantiation::Instantiation, LOG_LIFETIME, MSG_LEN};
+use crate::{LOG_LIFETIME, MSG_LEN, concat_array, instantiation::Instantiation};
 use core::{array::from_fn, fmt::Debug, iter::zip, marker::PhantomData};
 use num_bigint::BigUint;
 use p3_field::PrimeField32;
-use rand::{distributions::Standard, prelude::Distribution, Rng};
+use rand::{Rng, distr::StandardUniform, prelude::Distribution};
 use serde::{Deserialize, Serialize};
 
 pub mod baby_bear_horizon;
@@ -28,22 +28,22 @@ pub struct Poseidon2TargetSum<P>(PhantomData<P>);
 
 impl<P: Poseidon2Parameter> Instantiation<NUM_CHUNKS> for Poseidon2TargetSum<P>
 where
-    Standard: Distribution<P::F>,
+    StandardUniform: Distribution<P::F>,
 {
     type Parameter = [P::F; PARAM_FE_LEN];
     type Hash = [P::F; HASH_FE_LEN];
     type Rho = [P::F; RHO_FE_LEN];
 
     fn random_parameter(mut rng: impl Rng) -> Self::Parameter {
-        from_fn(|_| rng.gen())
+        from_fn(|_| rng.random())
     }
 
     fn random_hash(mut rng: impl Rng) -> Self::Hash {
-        from_fn(|_| rng.gen())
+        from_fn(|_| rng.random())
     }
 
     fn random_rho(mut rng: impl Rng) -> Self::Rho {
-        from_fn(|_| rng.gen())
+        from_fn(|_| rng.random())
     }
 
     fn encode(
@@ -171,24 +171,28 @@ pub fn encode_msg<F: PrimeField32>(msg: [u8; MSG_LEN]) -> [F; MSG_FE_LEN] {
 
 pub fn encode_tweak_chain<F: PrimeField32>(epoch: u32, i: u16, k: u16) -> [F; TWEAK_FE_LEN] {
     const SEP: u32 = 0x00;
-    [
-        F::from_canonical_u32((epoch << 2) | SEP),
-        F::from_canonical_u32((u32::from(i) << 16) | u32::from(k)),
-    ]
+    unsafe {
+        [
+            F::from_canonical_unchecked((epoch << 2) | SEP),
+            F::from_canonical_unchecked((u32::from(i) << 16) | u32::from(k)),
+        ]
+    }
 }
 
 pub fn encode_tweak_merkle_tree<F: PrimeField32>(l: u8, i: u32) -> [F; TWEAK_FE_LEN] {
     const SEP: u32 = 0x01;
-    [
-        F::from_canonical_u32((u32::from(l) << 2) | SEP),
-        F::from_canonical_u32(i),
-    ]
+    unsafe {
+        [
+            F::from_canonical_unchecked((u32::from(l) << 2) | SEP),
+            F::from_canonical_unchecked(i),
+        ]
+    }
 }
 
 pub fn encode_tweak_msg<F: PrimeField32>(epoch: u32) -> [F; TWEAK_FE_LEN] {
     const SEP: u32 = 0x02;
     const { assert!(LOG_LIFETIME < 28) };
-    [F::from_canonical_u32((epoch << 2) | SEP), F::ZERO]
+    unsafe { [F::from_canonical_unchecked((epoch << 2) | SEP), F::ZERO] }
 }
 
 pub fn decompose<F: PrimeField32, const N: usize>(big: impl Into<BigUint>) -> [F; N] {
@@ -196,57 +200,61 @@ pub fn decompose<F: PrimeField32, const N: usize>(big: impl Into<BigUint>) -> [F
     from_fn(|_| {
         let rem = &big % &BigUint::from(F::ORDER_U32);
         big /= BigUint::from(F::ORDER_U32);
-        F::from_canonical_u32(rem.iter_u32_digits().next().unwrap_or_default())
+        unsafe { F::from_canonical_unchecked(rem.iter_u32_digits().next().unwrap_or_default()) }
     })
 }
 
 #[cfg(test)]
 mod test {
     use crate::{
+        LOG_LIFETIME, PublicKey, Signature,
         instantiation::{
-            poseidon2::{baby_bear_horizon::BabyBearHorizon, Poseidon2TargetSum},
             Instantiation,
+            poseidon2::{Poseidon2TargetSum, baby_bear_horizon::BabyBearHorizon},
         },
-        PublicKey, Signature, LOG_LIFETIME,
     };
     use core::array::from_fn;
     use hashsig::signature::{
-        generalized_xmss::instantiations_poseidon::lifetime_2_to_the_20::target_sum::SIGTargetSumLifetime20W2NoOff,
         SignatureScheme,
+        generalized_xmss::instantiations_poseidon::lifetime_2_to_the_20::target_sum::SIGTargetSumLifetime20W2NoOff,
     };
     use num_bigint::BigUint;
     use p3_baby_bear::BabyBear;
-    use p3_field::FieldAlgebra;
-    use rand::{thread_rng, Rng};
+    use p3_field::integers::QuotientMap;
+    use rand_0_8_5::{Rng, thread_rng};
 
     #[test]
     fn consistency() {
         type HashSig = SIGTargetSumLifetime20W2NoOff;
         type HashSigVerifier = Poseidon2TargetSum<BabyBearHorizon>;
 
-        let ark_to_p3 = |v| BabyBear::from_canonical_u32(u32::try_from(BigUint::from(v)).unwrap());
+        let ark_to_p3 = |v| unsafe {
+            BabyBear::from_canonical_unchecked(u32::try_from(BigUint::from(v)).unwrap())
+        };
 
         let mut rng = thread_rng();
-        let (pk, sk) = HashSig::gen(&mut rng);
+        let (pk, sk) = HashSig::r#gen(&mut rng);
         for _ in 0..100 {
             let epoch = rng.gen_range(0..1 << LOG_LIFETIME);
-            let msg = rng.gen();
+            let msg = rng.r#gen();
             let sig = HashSig::sign(&mut rng, &sk, epoch, &msg).unwrap();
             assert!(HashSig::verify(&pk, epoch, &msg, &sig));
-            assert!(HashSigVerifier::verify(
-                epoch,
-                msg,
-                PublicKey {
-                    parameter: pk.parameter().map(ark_to_p3),
-                    merkle_root: pk.root().map(ark_to_p3),
-                },
-                Signature {
-                    rho: sig.rho().map(ark_to_p3),
-                    one_time_sig: from_fn(|i| sig.hashes()[i].map(ark_to_p3)),
-                    merkle_siblings: from_fn(|i| sig.path().co_path()[i].map(ark_to_p3)),
-                }
-            )
-            .is_ok());
+            assert!(
+                HashSigVerifier::verify(
+                    epoch,
+                    msg,
+                    PublicKey {
+                        parameter: pk.parameter().map(ark_to_p3),
+                        merkle_root: pk.root().map(ark_to_p3),
+                    },
+                    Signature {
+                        rho: sig.rho().map(ark_to_p3),
+                        one_time_sig: from_fn(|i| sig.hashes()[i].map(ark_to_p3)),
+                        merkle_siblings: from_fn(|i| sig.path().co_path()[i].map(ark_to_p3)),
+                    }
+                )
+                .is_ok()
+            );
         }
     }
 }

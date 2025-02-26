@@ -1,8 +1,8 @@
 use core::array::from_fn;
 use hash_sig_verifier::{
-    instantiation::Instantiation, PublicKey, Signature, VerificationInput, LOG_LIFETIME,
+    LOG_LIFETIME, PublicKey, Signature, VerificationInput, instantiation::Instantiation,
 };
-use rand::{random, thread_rng};
+use rand::{random, rng};
 use rayon::prelude::*;
 
 pub fn mock_vi<I: Instantiation<NUM_CHUNKS>, const NUM_CHUNKS: usize>(
@@ -13,7 +13,7 @@ pub fn mock_vi<I: Instantiation<NUM_CHUNKS>, const NUM_CHUNKS: usize>(
     let pairs = (0..size)
         .into_par_iter()
         .map(|_| {
-            let mut rng = thread_rng();
+            let mut rng = rng();
             let mut pk = PublicKey {
                 parameter: I::random_parameter(&mut rng),
                 merkle_root: Default::default(),

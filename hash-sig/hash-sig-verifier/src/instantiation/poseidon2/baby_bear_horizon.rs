@@ -31,8 +31,8 @@ impl Poseidon2Parameter for BabyBearHorizon {
 #[cfg(test)]
 mod test {
     use crate::instantiation::poseidon2::{
-        baby_bear_horizon::BabyBearHorizon, decompose, Poseidon2Parameter, HASH_FE_LEN, NUM_CHUNKS,
-        PARAM_FE_LEN, SPONGE_CAPACITY, TWEAK_FE_LEN,
+        HASH_FE_LEN, NUM_CHUNKS, PARAM_FE_LEN, Poseidon2Parameter, SPONGE_CAPACITY, TWEAK_FE_LEN,
+        baby_bear_horizon::BabyBearHorizon, decompose,
     };
     use num_bigint::BigUint;
     use p3_baby_bear::BabyBear;

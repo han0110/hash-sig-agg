@@ -1,13 +1,9 @@
-use core::{
-    iter::zip,
-    marker::PhantomData,
-    ops::{AddAssign, Mul},
-};
-use p3_field::FieldAlgebra;
+use core::{iter::zip, marker::PhantomData};
+use p3_field::{Algebra, Field, InjectiveMonomial};
 use p3_poseidon2::{
-    add_rc_and_sbox_generic, external_initial_permute_state, external_terminal_permute_state,
-    mds_light_permutation, ExternalLayer, ExternalLayerConstants, ExternalLayerConstructor,
-    GenericPoseidon2LinearLayers, HLMDSMat4, InternalLayer, InternalLayerConstructor,
+    ExternalLayer, ExternalLayerConstants, ExternalLayerConstructor, GenericPoseidon2LinearLayers,
+    HLMDSMat4, InternalLayer, InternalLayerConstructor, add_rc_and_sbox_generic,
+    external_initial_permute_state, external_terminal_permute_state, mds_light_permutation,
 };
 
 pub mod baby_bear;
@@ -23,24 +19,28 @@ pub struct Poseidon2ExternalLayerHorizon<F, const WIDTH: usize, const SBOX_DEGRE
     Vec<[F; WIDTH]>,
 );
 
-impl<F: Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    ExternalLayerConstructor<FA, WIDTH> for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
+impl<F: Field, const WIDTH: usize, const SBOX_DEGREE: u64> ExternalLayerConstructor<F, WIDTH>
+    for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
-    fn new_from_constants(external_constants: ExternalLayerConstants<FA::F, WIDTH>) -> Self {
+    fn new_from_constants(external_constants: ExternalLayerConstants<F, WIDTH>) -> Self {
         let initial = external_constants.get_initial_constants().clone();
         let terminal = external_constants.get_terminal_constants().clone();
         Self(initial, terminal)
     }
 }
 
-impl<F: Sync + Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    ExternalLayer<FA, WIDTH, SBOX_DEGREE> for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
+impl<
+    F: Field,
+    FA: Algebra<F> + InjectiveMonomial<SBOX_DEGREE>,
+    const WIDTH: usize,
+    const SBOX_DEGREE: u64,
+> ExternalLayer<FA, WIDTH, SBOX_DEGREE> for Poseidon2ExternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
     fn permute_state_initial(&self, state: &mut [FA; WIDTH]) {
         external_initial_permute_state(
             state,
             &self.0,
-            add_rc_and_sbox_generic::<_, SBOX_DEGREE>,
+            add_rc_and_sbox_generic::<F, FA, SBOX_DEGREE>,
             &HLMDSMat4,
         );
     }
@@ -49,7 +49,7 @@ impl<F: Sync + Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEG
         external_terminal_permute_state(
             state,
             &self.1,
-            add_rc_and_sbox_generic::<_, SBOX_DEGREE>,
+            add_rc_and_sbox_generic::<F, FA, SBOX_DEGREE>,
             &HLMDSMat4,
         );
     }
@@ -58,10 +58,10 @@ impl<F: Sync + Copy, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEG
 #[derive(Clone, Debug)]
 pub struct Poseidon2InternalLayerHorizon<F, const WIDTH: usize, const SBOX_DEGREE: u64>(Vec<F>);
 
-impl<F, FA: FieldAlgebra<F = F>, const WIDTH: usize, const SBOX_DEGREE: u64>
-    InternalLayerConstructor<FA> for Poseidon2InternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
+impl<F: Field, const WIDTH: usize, const SBOX_DEGREE: u64> InternalLayerConstructor<F>
+    for Poseidon2InternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 {
-    fn new_from_constants(internal_constants: Vec<FA::F>) -> Self {
+    fn new_from_constants(internal_constants: Vec<F>) -> Self {
         Self(internal_constants)
     }
 }
@@ -70,7 +70,7 @@ impl<F, FA, const WIDTH: usize, const SBOX_DEGREE: u64> InternalLayer<FA, WIDTH,
     for Poseidon2InternalLayerHorizon<F, WIDTH, SBOX_DEGREE>
 where
     F: MatDiagMinusOne<WIDTH> + Sync + Copy,
-    FA: FieldAlgebra<F = F> + AddAssign<F> + Mul<F, Output = FA>,
+    FA: Algebra<F>,
 {
     fn permute_state(&self, state: &mut [FA; WIDTH]) {
         self.0.iter().for_each(|rc| {
@@ -90,7 +90,7 @@ pub struct Poseidon2LinearLayersHorizon<F, const WIDTH: usize>(PhantomData<F>);
 impl<F: Sync + Copy + MatDiagMinusOne<WIDTH>, FA, const WIDTH: usize>
     GenericPoseidon2LinearLayers<FA, WIDTH> for Poseidon2LinearLayersHorizon<F, WIDTH>
 where
-    FA: FieldAlgebra<F = F> + Mul<F, Output = FA>,
+    FA: Algebra<F>,
 {
     fn internal_linear_layer(state: &mut [FA; WIDTH]) {
         let sum = state.iter().cloned().sum::<FA>();

@@ -1,4 +1,4 @@
-use crate::{concat_array, instantiation::Instantiation, LOG_LIFETIME, MSG_LEN};
+use crate::{LOG_LIFETIME, MSG_LEN, concat_array, instantiation::Instantiation};
 use core::{array::from_fn, fmt::Debug, iter::zip, marker::PhantomData};
 use rand::Rng;
 use serde::{Deserialize, Serialize};
@@ -52,15 +52,15 @@ impl<P: Sha3Digest> Instantiation<NUM_CHUNKS> for Sha3TargetSum<P> {
     type Rho = [u8; RHO_LEN];
 
     fn random_parameter(mut rng: impl Rng) -> Self::Parameter {
-        rng.gen()
+        rng.random()
     }
 
     fn random_hash(mut rng: impl Rng) -> Self::Hash {
-        rng.gen()
+        rng.random()
     }
 
     fn random_rho(mut rng: impl Rng) -> Self::Rho {
-        rng.gen()
+        rng.random()
     }
 
     fn encode(

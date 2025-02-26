@@ -1,10 +1,8 @@
 [package]
 name = "hash-sig-verifier"
-version = "0.1.0"
-edition = "2021"
 
-[lints]
-workspace = true
+edition.workspace = true
+version.workspace = true
 
 [dependencies]
 num-bigint = { workspace = true }
@@ -21,3 +19,7 @@ sha3 = { workspace = true }
 
 [dev-dependencies]
 hashsig = { workspace = true }
+rand-0-8-5 = { workspace = true }
+
+[lints]
+workspace = true
