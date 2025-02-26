@@ -1,16 +1,15 @@
 use crate::instantiation::horizon::{
-    baby_bear::constant::{RC16, RC24, SBOX_DEGREE},
     Poseidon2ExternalLayerHorizon, Poseidon2InternalLayerHorizon,
+    baby_bear::constant::{RC16, RC24, SBOX_DEGREE},
 };
 use p3_baby_bear::BabyBear;
-use p3_field::Field;
 use p3_poseidon2::{ExternalLayerConstants, Poseidon2};
 use std::sync::LazyLock;
 
 pub mod constant;
 
 pub type Poseidon2BabyBearHorizon<const WIDTH: usize> = Poseidon2<
-    <BabyBear as Field>::Packing,
+    BabyBear,
     Poseidon2ExternalLayerHorizon<BabyBear, WIDTH, SBOX_DEGREE>,
     Poseidon2InternalLayerHorizon<BabyBear, WIDTH, SBOX_DEGREE>,
     WIDTH,
@@ -46,17 +45,17 @@ pub fn poseidon2_baby_bear_horizon_t24() -> &'static Poseidon2BabyBearHorizon<24
 #[cfg(test)]
 mod test {
     use crate::instantiation::horizon::{
-        baby_bear::{
-            poseidon2_baby_bear_horizon_t16, poseidon2_baby_bear_horizon_t24,
-            Poseidon2BabyBearHorizon,
-        },
         MatDiagMinusOne,
+        baby_bear::{
+            Poseidon2BabyBearHorizon, poseidon2_baby_bear_horizon_t16,
+            poseidon2_baby_bear_horizon_t24,
+        },
     };
     use core::array::from_fn;
     use p3_baby_bear::BabyBear;
-    use p3_field::FieldAlgebra;
+    use p3_field::integers::QuotientMap;
     use p3_symmetric::Permutation;
-    use rand::{rngs::StdRng, SeedableRng};
+    use rand_0_8_5::{SeedableRng, rngs::StdRng};
     use zkhash::{
         ark_ff::{PrimeField, UniformRand},
         fields::babybear::FpBabyBear,
@@ -93,7 +92,7 @@ mod test {
         check(poseidon2_baby_bear_horizon_t24());
     }
 
-    fn horizon_to_p3<F: FieldAlgebra>(value: FpBabyBear) -> F {
-        F::from_canonical_u64(value.into_bigint().0[0])
+    fn horizon_to_p3<F: QuotientMap<u64>>(value: FpBabyBear) -> F {
+        F::from_canonical_checked(value.into_bigint().0[0]).unwrap()
     }
 }

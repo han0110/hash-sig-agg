@@ -1,7 +1,7 @@
-use crate::{PublicKey, Signature, LOG_LIFETIME, MSG_LEN};
+use crate::{LOG_LIFETIME, MSG_LEN, PublicKey, Signature};
 use core::{array::from_fn, fmt::Debug};
 use rand::Rng;
-use serde::{de::DeserializeOwned, Serialize};
+use serde::{Serialize, de::DeserializeOwned};
 
 pub mod poseidon2;
 pub mod sha3;

@@ -1,10 +1,8 @@
 [package]
 name = "p3-poseidon2-util"
-version = "0.1.0"
-edition = "2021"
 
-[lints]
-workspace = true
+edition.workspace = true
+version.workspace = true
 
 [dependencies]
 p3-baby-bear = { workspace = true }
@@ -16,7 +14,11 @@ p3-poseidon2-air = { workspace = true, optional = true }
 [dev-dependencies]
 p3-symmetric = { workspace = true }
 rand = { workspace = true }
+rand-0-8-5 = { workspace = true }
 zkhash = { workspace = true }
 
 [features]
 air = ["dep:p3-poseidon2-air"]
+
+[lints]
+workspace = true

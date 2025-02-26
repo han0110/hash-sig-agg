@@ -4,7 +4,7 @@ use p3_field::Field;
 mod generation;
 
 pub use generation::generate_trace_rows_for_perm;
-pub use p3_poseidon2_air::{num_cols, Poseidon2Air, Poseidon2Cols};
+pub use p3_poseidon2_air::{Poseidon2Air, Poseidon2Cols, num_cols};
 
 impl<F: Field, const WIDTH: usize, const HALF_FULL_ROUNDS: usize, const PARTIAL_ROUNDS: usize>
     From<RoundConstants<F, WIDTH, HALF_FULL_ROUNDS, PARTIAL_ROUNDS>>

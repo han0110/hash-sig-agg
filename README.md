@@ -2,8 +2,7 @@
 
 ```
 .
-├── circuit                         # Hash-based signature aggregation by circuit
-│   └── openvm                      # With OpenVM's prover
+├── circuit                         # Hash-based signature aggregation by circuit with Plonky3
 │
 ├── hash-sig                        # Hash-based signature utility crates
 │   ├── hash-sig-verifier           # Verifier implementation for specific instantiations
