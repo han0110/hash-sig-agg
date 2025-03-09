@@ -2,9 +2,12 @@ use crate::{
     gadget::{not, select},
     poseidon2::{
         F, HALF_FULL_ROUNDS, Poseidon2LinearLayers, RC24, SBOX_DEGREE, SBOX_REGISTERS,
-        chip::merkle_tree::{
-            column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
-            poseidon2::{PARTIAL_ROUNDS, WIDTH},
+        chip::{
+            Bus,
+            merkle_tree::{
+                column::{MerkleTreeCols, NUM_MERKLE_TREE_COLS},
+                poseidon2::{PARTIAL_ROUNDS, WIDTH},
+            },
         },
         hash_sig::{
             HASH_FE_LEN, MSG_FE_LEN, PARAM_FE_LEN, SPONGE_CAPACITY_VALUES, SPONGE_RATE,
@@ -13,13 +16,13 @@ use crate::{
     },
     util::zip,
 };
-use core::{array::from_fn, borrow::Borrow};
+use core::{array::from_fn, borrow::Borrow, iter};
 use itertools::Itertools;
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
 use p3_field::{Algebra, PrimeCharacteristicRing};
 use p3_matrix::Matrix;
 use p3_poseidon2_air::Poseidon2Air;
-use p3_uni_stark_ext::SubAirBuilder;
+use p3_uni_stark_ext::{InteractionAirBuilder, SubAirBuilder};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -57,65 +60,76 @@ impl BaseAirWithPublicValues<F> for MerkleTreeAir {
 
 impl<AB> Air<AB> for MerkleTreeAir
 where
-    AB: AirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionAirBuilder<F = F> + AirBuilderWithPublicValues,
     AB::Expr: Algebra<F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
-        self.0
-            .eval(&mut SubAirBuilder::new(builder, 0..self.0.width()));
-
         let main = builder.main();
-
-        let mut public_values = builder.public_values().iter().copied().map_into();
-        let epoch = public_values.next().unwrap();
-        let encoded_msg: [_; MSG_FE_LEN] = from_fn(|_| public_values.next().unwrap());
-        let encoded_tweak_msg: [_; TWEAK_FE_LEN] = from_fn(|_| public_values.next().unwrap());
-        let encoded_tweak_merkle_leaf: [_; TWEAK_FE_LEN] =
-            from_fn(|_| public_values.next().unwrap());
 
         let local = main.row_slice(0);
         let next = main.row_slice(1);
         let local: &MerkleTreeCols<AB::Var> = (*local).borrow();
         let next: &MerkleTreeCols<AB::Var> = (*next).borrow();
 
-        // When every row
-        eval_every_row(builder, local);
-        eval_merkle_leaf_every_row(builder, local);
-        eval_merkle_path_every_row(builder, local);
-
-        // When first row
-        {
-            let mut builder = builder.when_first_row();
-
-            builder.assert_zero(local.sig_idx);
-            builder.assert_one(local.is_merkle_leaf);
-            eval_merkle_leaf_first_row(&mut builder, encoded_tweak_merkle_leaf.clone(), local);
-        }
-
-        // When transition
-        {
-            let mut builder = builder.when_transition();
-
-            eval_sig_transition(&mut builder, local, next);
-            eval_merkle_leaf_transition(&mut builder, local, next);
-            eval_merkle_leaf_last_row(&mut builder, epoch, local, next);
-            eval_merkle_path_transition(&mut builder, local, next);
-            eval_merkle_path_last_row(&mut builder, local, next);
-            eval_msg(
-                &mut builder,
-                encoded_tweak_msg,
-                encoded_msg,
-                encoded_tweak_merkle_leaf,
-                local,
-                next,
-            );
-            eval_padding_transition(&mut builder, local, next);
+        if !AB::ONLY_INTERACTION {
+            self.0
+                .eval(&mut SubAirBuilder::new(builder, 0..self.0.width()));
+            eval_constriants(builder, local, next);
         }
 
         // Interaction
-        // receive_merkle_root_and_msg_hash(builder, local, next);
-        // receive_merkle_leaf(builder, local, next);
+        receive_merkle_root_and_msg_hash(builder, local, next);
+        receive_merkle_leaf(builder, local, next);
+    }
+}
+
+#[inline]
+fn eval_constriants<AB>(
+    builder: &mut AB,
+    local: &MerkleTreeCols<AB::Var>,
+    next: &MerkleTreeCols<AB::Var>,
+) where
+    AB: AirBuilderWithPublicValues<F = F>,
+{
+    let mut public_values = builder.public_values().iter().copied().map_into();
+    let epoch = public_values.next().unwrap();
+    let encoded_msg: [_; MSG_FE_LEN] = from_fn(|_| public_values.next().unwrap());
+    let encoded_tweak_msg: [_; TWEAK_FE_LEN] = from_fn(|_| public_values.next().unwrap());
+    let encoded_tweak_merkle_leaf: [_; TWEAK_FE_LEN] = from_fn(|_| public_values.next().unwrap());
+
+    // When every row
+    eval_every_row(builder, local);
+    eval_merkle_leaf_every_row(builder, local);
+    eval_merkle_path_every_row(builder, local);
+
+    // When first row
+    {
+        let mut builder = builder.when_first_row();
+
+        builder.assert_zero(local.sig_idx);
+        builder.assert_one(local.is_merkle_leaf);
+        eval_merkle_leaf_first_row(&mut builder, encoded_tweak_merkle_leaf.clone(), local);
+    }
+
+    // When transition
+    {
+        let mut builder = builder.when_transition();
+
+        eval_sig_transition(&mut builder, local, next);
+        eval_merkle_leaf_transition(&mut builder, local, next);
+        eval_merkle_leaf_last_row(&mut builder, epoch, local, next);
+        eval_merkle_path_transition(&mut builder, local, next);
+        eval_merkle_path_last_row(&mut builder, local, next);
+        eval_msg(
+            &mut builder,
+            encoded_tweak_msg,
+            encoded_msg,
+            encoded_tweak_merkle_leaf,
+            local,
+            next,
+        );
+        eval_padding_transition(&mut builder, local, next);
     }
 }
 
@@ -382,74 +396,74 @@ fn eval_padding_transition<AB>(
     builder.assert_one(next.is_padding::<AB>());
 }
 
-// #[inline]
-// fn receive_merkle_root_and_msg_hash<AB>(
-//     builder: &mut AB,
-//     local: &MerkleTreeCols<AB::Var>,
-//     next: &MerkleTreeCols<AB::Var>,
-// ) where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(
-//         Bus::MerkleRootAndMsgHash as usize,
-//         iter::once(local.sig_idx.into())
-//             .chain(local.merkle_parameter().map(Into::into))
-//             .chain(local.compress_output::<AB>())
-//             .chain(next.msg_hash::<AB>()),
-//         local.is_last_merkle_path_row::<AB>(),
-//     );
-// }
+#[inline]
+fn receive_merkle_root_and_msg_hash<AB>(
+    builder: &mut AB,
+    local: &MerkleTreeCols<AB::Var>,
+    next: &MerkleTreeCols<AB::Var>,
+) where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(
+        Bus::MerkleRootAndMsgHash as usize,
+        iter::once(local.sig_idx.into())
+            .chain(local.merkle_parameter().map(Into::into))
+            .chain(local.compress_output::<AB>())
+            .chain(next.msg_hash::<AB>()),
+        local.is_last_merkle_path_row::<AB>(),
+    );
+}
 
-// #[inline]
-// fn receive_merkle_leaf<AB>(
-//     builder: &mut AB,
-//     local: &MerkleTreeCols<AB::Var>,
-//     next: &MerkleTreeCols<AB::Var>,
-// ) where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(
-//         Bus::MerkleLeaf as usize,
-//         [local.sig_idx.into(), local.leaf_chunk_idx.into()]
-//             .into_iter()
-//             .chain(local.sponge_block[..HASH_FE_LEN].iter().copied().map_into()),
-//         local.is_receive_merkle_tree[0] * local.leaf_chunk_start_ind[0].into(),
-//     );
-//     builder.push_receive(
-//         Bus::MerkleLeaf as usize,
-//         [
-//             local.sig_idx.into(),
-//             local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into(),
-//         ]
-//         .into_iter()
-//         .chain((0..HASH_FE_LEN).map(|i| {
-//             (1..)
-//                 .take(HASH_FE_LEN)
-//                 .map(|j| local.leaf_chunk_start_ind[j] * local.sponge_block[j + i])
-//                 .sum()
-//         })),
-//         local.is_receive_merkle_tree[1],
-//     );
-//     builder.push_receive(
-//         Bus::MerkleLeaf as usize,
-//         [
-//             local.sig_idx.into(),
-//             local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into() + AB::Expr::ONE,
-//         ]
-//         .into_iter()
-//         .chain((0..HASH_FE_LEN).map(|i| {
-//             (1 + HASH_FE_LEN..)
-//                 .take(HASH_FE_LEN)
-//                 .map(|j| {
-//                     local.leaf_chunk_start_ind[j]
-//                         * (if j + i < SPONGE_RATE {
-//                             local.sponge_block[j + i]
-//                         } else {
-//                             next.sponge_block[j + i - SPONGE_RATE]
-//                         })
-//                 })
-//                 .sum()
-//         })),
-//         local.is_receive_merkle_tree[2] * not(local.is_last_sponge_step::<AB>()),
-//     );
-// }
+#[inline]
+fn receive_merkle_leaf<AB>(
+    builder: &mut AB,
+    local: &MerkleTreeCols<AB::Var>,
+    next: &MerkleTreeCols<AB::Var>,
+) where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(
+        Bus::MerkleLeaf as usize,
+        [local.sig_idx.into(), local.leaf_chunk_idx.into()]
+            .into_iter()
+            .chain(local.sponge_block[..HASH_FE_LEN].iter().copied().map_into()),
+        local.is_receive_merkle_tree[0] * local.leaf_chunk_start_ind[0].into(),
+    );
+    builder.push_receive(
+        Bus::MerkleLeaf as usize,
+        [
+            local.sig_idx.into(),
+            local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into(),
+        ]
+        .into_iter()
+        .chain((0..HASH_FE_LEN).map(|i| {
+            (1..)
+                .take(HASH_FE_LEN)
+                .map(|j| local.leaf_chunk_start_ind[j] * local.sponge_block[j + i])
+                .sum()
+        })),
+        local.is_receive_merkle_tree[1],
+    );
+    builder.push_receive(
+        Bus::MerkleLeaf as usize,
+        [
+            local.sig_idx.into(),
+            local.leaf_chunk_idx.into() + local.leaf_chunk_start_ind[0].into() + AB::Expr::ONE,
+        ]
+        .into_iter()
+        .chain((0..HASH_FE_LEN).map(|i| {
+            (1 + HASH_FE_LEN..)
+                .take(HASH_FE_LEN)
+                .map(|j| {
+                    local.leaf_chunk_start_ind[j]
+                        * (if j + i < SPONGE_RATE {
+                            local.sponge_block[j + i]
+                        } else {
+                            next.sponge_block[j + i - SPONGE_RATE]
+                        })
+                })
+                .sum()
+        })),
+        local.is_receive_merkle_tree[2] * not(local.is_last_sponge_step::<AB>()),
+    );
+}

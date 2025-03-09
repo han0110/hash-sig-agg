@@ -22,6 +22,8 @@ use p3_field::{PrimeCharacteristicRing, PrimeField32};
 use p3_matrix::dense::{RowMajorMatrix, RowMajorMatrixViewMut};
 use p3_maybe_rayon::prelude::*;
 
+const MAX_X_I: u32 = (1 << CHUNK_SIZE) - 1;
+
 const NUM_ROWS_PER_SIG: usize = MSG_HASH_FE_LEN + NUM_MSG_HASH_LIMBS;
 
 pub const fn trace_height(traces: &[VerificationTrace]) -> usize {
@@ -146,6 +148,7 @@ fn generate_acc_row(
     row.carries.fill_from_iter(carries.map(F::from_u32));
 
     row.decomposition_bits.fill_zero();
+    row.is_send_chain.fill_zero();
     row.sum.write_zero();
 }
 
@@ -162,6 +165,11 @@ fn generate_decomposition_row(
     row.acc_limbs.fill_from_iter(acc_limbs.map(F::from_u32));
     row.decomposition_bits
         .fill_from_iter((0..LIMB_BITS).map(|i| F::from_bool((acc_limbs[step] >> i) & 1 == 1)));
+    row.is_send_chain.fill_from_iter(
+        (0..LIMB_BITS)
+            .step_by(CHUNK_SIZE)
+            .map(|i| F::from_bool((acc_limbs[step] >> i) & MAX_X_I != MAX_X_I)),
+    );
     row.sum.write_u32(sum);
 
     row.values.fill_zero();
@@ -198,5 +206,6 @@ fn generate_padding_row(row: &mut DecompositionCols<MaybeUninit<F>>) {
     row.acc_limbs.fill_zero();
     row.carries.fill_zero();
     row.decomposition_bits.fill_zero();
+    row.is_send_chain.fill_zero();
     row.sum.write_zero();
 }

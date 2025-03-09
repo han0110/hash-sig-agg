@@ -10,8 +10,8 @@ use p3_keccak::{Keccak256Hash, KeccakF, VECTOR_LEN};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
 use p3_uni_stark_ext::{
-    PcsError, Proof, ProverConstraintFolder, ProverInput, StarkConfig, SymbolicAirBuilder,
-    VerificationError, VerifierConstraintFolder, VerifierInput, prove, verify,
+    PcsError, Proof, ProverConstraintFolder, ProverInput, ProverInteractionFolder, StarkConfig,
+    SymbolicAirBuilder, VerificationError, VerifierConstraintFolder, VerifierInput, prove, verify,
 };
 
 type U64Hash = PaddingFreeSponge<KeccakF, 25, 17, 4>;
@@ -80,14 +80,16 @@ where
     }
 
     pub fn prove<
-        #[cfg(debug_assertions)] A: for<'a> Air<p3_uni_stark_ext::DebugConstraintBuilder<'a, F>>,
-        #[cfg(not(debug_assertions))] A,
+        #[cfg(feature = "check-constraints")] A: for<'a> Air<p3_uni_stark_ext::DebugConstraintBuilder<'a, F>>,
+        #[cfg(not(feature = "check-constraints"))] A,
     >(
         &self,
         inputs: Vec<ProverInput<F, A>>,
     ) -> Proof<Config<F, E>>
     where
-        A: Air<SymbolicAirBuilder<F>> + for<'a> Air<ProverConstraintFolder<'a, Config<F, E>>>,
+        A: Air<SymbolicAirBuilder<F>>
+            + for<'a> Air<ProverConstraintFolder<'a, Config<F, E>>>
+            + for<'a> Air<ProverInteractionFolder<'a, Config<F, E>>>,
     {
         let mut challenger = new_challenger();
         prove(self.config(), inputs, &mut challenger)
@@ -107,8 +109,8 @@ where
 
     #[cfg(test)]
     pub fn test<
-        #[cfg(debug_assertions)] A: for<'a> Air<p3_uni_stark_ext::DebugConstraintBuilder<'a, F>>,
-        #[cfg(not(debug_assertions))] A,
+        #[cfg(feature = "check-constraints")] A: for<'a> Air<p3_uni_stark_ext::DebugConstraintBuilder<'a, F>>,
+        #[cfg(not(feature = "check-constraints"))] A,
     >(
         &self,
         prover_inputs: Vec<ProverInput<F, A>>,
@@ -116,6 +118,7 @@ where
         A: Clone
             + Air<SymbolicAirBuilder<F>>
             + for<'a> Air<ProverConstraintFolder<'a, Config<F, E>>>
+            + for<'a> Air<ProverInteractionFolder<'a, Config<F, E>>>
             + for<'a> Air<VerifierConstraintFolder<'a, Config<F, E>>>,
     {
         let verifier_inputs = prover_inputs.iter().map(|v| (**v).clone()).collect();

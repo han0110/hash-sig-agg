@@ -22,7 +22,7 @@ p3-poseidon2 = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-poseidon2-air = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-sha256 = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-symmetric = { git = "https://github.com/Plonky3/Plonky3.git" }
-p3-uni-stark-ext = { git = "https://github.com/han0110/p3-playground.git" }
+p3-uni-stark-ext = { git = "https://github.com/han0110/p3-playground.git", branch = "feature/interaction" }
 tracing = "0.1.41"
 
 hash-sig-verifier = { path = "../hash-sig/hash-sig-verifier" }
@@ -35,6 +35,9 @@ tracing-forest = { version = "0.1.6", features = ["smallvec"] }
 tracing-subscriber = { version = "0.3.17", features = ["std", "env-filter"] }
 
 hash-sig-testdata = { path = "../hash-sig/hash-sig-testdata" }
+
+[features]
+check-constraints = ["p3-uni-stark-ext/check-constraints"]
 
 [profile.ci]
 inherits = "release"

@@ -1,11 +1,15 @@
 use crate::poseidon2::{
     F,
-    chip::range_check::column::{NUM_RANGE_CHECK_COLS, RangeCheckCols},
+    chip::{
+        Bus,
+        range_check::column::{NUM_RANGE_CHECK_COLS, RangeCheckCols},
+    },
 };
 use core::borrow::Borrow;
-use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
+use p3_air::{Air, AirBuilder, BaseAir, BaseAirWithPublicValues};
 use p3_field::PrimeCharacteristicRing;
 use p3_matrix::Matrix;
+use p3_uni_stark_ext::InteractionAirBuilder;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RangeCheckAir;
@@ -20,7 +24,7 @@ impl BaseAirWithPublicValues<F> for RangeCheckAir {}
 
 impl<AB> Air<AB> for RangeCheckAir
 where
-    AB: AirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionAirBuilder<F = F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
@@ -31,22 +35,35 @@ where
         let local: &RangeCheckCols<AB::Var> = (*local).borrow();
         let next: &RangeCheckCols<AB::Var> = (*next).borrow();
 
-        // When first row
-        {
-            let mut builder = builder.when_first_row();
-
-            builder.assert_zero(local.value);
-        }
-
-        // When transition
-        {
-            let mut builder = builder.when_transition();
-
-            eval_range_check_transition(&mut builder, local, next);
+        if !AB::ONLY_INTERACTION {
+            eval_constriants(builder, local, next);
         }
 
         // Interaction
-        // receive_range_check(builder, local);
+        receive_range_check(builder, local);
+    }
+}
+
+#[inline]
+fn eval_constriants<AB>(
+    builder: &mut AB,
+    local: &RangeCheckCols<AB::Var>,
+    next: &RangeCheckCols<AB::Var>,
+) where
+    AB: AirBuilder<F = F>,
+{
+    // When first row
+    {
+        let mut builder = builder.when_first_row();
+
+        builder.assert_zero(local.value);
+    }
+
+    // When transition
+    {
+        let mut builder = builder.when_transition();
+
+        eval_range_check_transition(&mut builder, local, next);
     }
 }
 
@@ -61,10 +78,10 @@ fn eval_range_check_transition<AB>(
     builder.assert_eq(next.value, local.value + AB::Expr::ONE);
 }
 
-// #[inline]
-// fn receive_range_check<AB>(builder: &mut AB, cols: &RangeCheckCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(Bus::RangeCheck as usize, [cols.value], cols.mult);
-// }
+#[inline]
+fn receive_range_check<AB>(builder: &mut AB, cols: &RangeCheckCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(Bus::RangeCheck as usize, [cols.value], cols.mult);
+}

@@ -2,20 +2,23 @@ use crate::{
     gadget::{not, select},
     poseidon2::{
         F, HALF_FULL_ROUNDS, Poseidon2LinearLayers, RC16, SBOX_DEGREE, SBOX_REGISTERS,
-        chip::chain::{
-            column::{ChainCols, NUM_CHAIN_COLS},
-            poseidon2::{PARTIAL_ROUNDS, WIDTH},
+        chip::{
+            Bus,
+            chain::{
+                column::{ChainCols, NUM_CHAIN_COLS},
+                poseidon2::{PARTIAL_ROUNDS, WIDTH},
+            },
         },
     },
     util::zip,
 };
-use core::borrow::Borrow;
+use core::{borrow::Borrow, iter};
 use itertools::Itertools;
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
 use p3_field::{Algebra, PrimeCharacteristicRing};
 use p3_matrix::Matrix;
 use p3_poseidon2_air::Poseidon2Air;
-use p3_uni_stark_ext::SubAirBuilder;
+use p3_uni_stark_ext::{InteractionAirBuilder, SubAirBuilder};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -53,50 +56,60 @@ impl BaseAirWithPublicValues<F> for ChainAir {
 
 impl<AB> Air<AB> for ChainAir
 where
-    AB: AirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionAirBuilder<F = F> + AirBuilderWithPublicValues,
     AB::Expr: Algebra<F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
-        self.0
-            .eval(&mut SubAirBuilder::new(builder, 0..self.0.width()));
-
-        let encoded_tweak_chain_first = builder.public_values()[0].into();
-
         let main = builder.main();
+
         let local = main.row_slice(0);
         let next = main.row_slice(1);
         let local: &ChainCols<AB::Var> = (*local).borrow();
         let next: &ChainCols<AB::Var> = (*next).borrow();
 
-        // When every rows
-        eval_every_row(builder, encoded_tweak_chain_first, local);
-
-        // When first row
-        {
-            let mut builder = builder.when_first_row();
-
-            builder.assert_one(*local.is_active);
-            builder.assert_zero(local.sig_idx);
-            local.sig_step.eval_first_row(&mut builder);
-            eval_sig_first_row(&mut builder, local);
-        }
-
-        // When transition
-        {
-            let mut builder = builder.when_transition();
-
-            eval_transition(&mut builder, local, next);
-            eval_sig_transition(&mut builder, local, next);
-            eval_sig_last_row(&mut builder, local, next);
-            eval_chain_transition(&mut builder, local, next);
-            eval_chain_last_row(&mut builder, local, next);
+        if !AB::ONLY_INTERACTION {
+            self.0
+                .eval(&mut SubAirBuilder::new(builder, 0..self.0.width()));
+            eval_constriants(builder, local, next);
         }
 
         // Interaction
-        // receive_parameter(builder, local);
-        // receive_chain(builder, local);
-        // send_merkle_tree(builder, local);
+        receive_parameter(builder, local);
+        receive_chain(builder, local);
+        send_merkle_tree(builder, local);
+    }
+}
+
+#[inline]
+fn eval_constriants<AB>(builder: &mut AB, local: &ChainCols<AB::Var>, next: &ChainCols<AB::Var>)
+where
+    AB: AirBuilderWithPublicValues<F = F>,
+{
+    let encoded_tweak_chain_first = builder.public_values()[0].into();
+
+    // When every rows
+    eval_every_row(builder, encoded_tweak_chain_first, local);
+
+    // When first row
+    {
+        let mut builder = builder.when_first_row();
+
+        builder.assert_one(*local.is_active);
+        builder.assert_zero(local.sig_idx);
+        local.sig_step.eval_first_row(&mut builder);
+        eval_sig_first_row(&mut builder, local);
+    }
+
+    // When transition
+    {
+        let mut builder = builder.when_transition();
+
+        eval_transition(&mut builder, local, next);
+        eval_sig_transition(&mut builder, local, next);
+        eval_sig_last_row(&mut builder, local, next);
+        eval_chain_transition(&mut builder, local, next);
+        eval_chain_last_row(&mut builder, local, next);
     }
 }
 
@@ -217,47 +230,47 @@ where
     builder.assert_one(next.is_x_i);
 }
 
-// #[inline]
-// fn receive_parameter<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(
-//         Bus::Parameter as usize,
-//         iter::once(local.sig_idx).chain(local.parameter()),
-//         (*local.is_active).into() * local.is_last_sig_row::<AB>(),
-//     );
-// }
+#[inline]
+fn receive_parameter<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(
+        Bus::Parameter as usize,
+        iter::once(local.sig_idx).chain(local.parameter()),
+        (*local.is_active).into() * local.is_last_sig_row::<AB>(),
+    );
+}
 
-// #[inline]
-// fn receive_chain<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(
-//         Bus::Chain as usize,
-//         [
-//             local.sig_idx.into(),
-//             (*local.chain_idx).into(),
-//             local.chain_step::<AB>(),
-//         ],
-//         (*local.is_active).into() * local.is_x_i.into(),
-//     );
-// }
+#[inline]
+fn receive_chain<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(
+        Bus::Chain as usize,
+        [
+            local.sig_idx.into(),
+            (*local.chain_idx).into(),
+            local.chain_step::<AB>(),
+        ],
+        (*local.is_active).into() * local.is_x_i.into(),
+    );
+}
 
-// #[inline]
-// fn send_merkle_tree<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_send(
-//         Bus::MerkleLeaf as usize,
-//         [
-//             local.sig_idx.into(),
-//             (*local.chain_idx).into() + AB::Expr::ONE,
-//         ]
-//         .into_iter()
-//         .chain(local.compression_output::<AB>()),
-//         *local.is_active * local.is_last_chain_step::<AB>(),
-//     );
-// }
+#[inline]
+fn send_merkle_tree<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_send(
+        Bus::MerkleLeaf as usize,
+        [
+            local.sig_idx.into(),
+            (*local.chain_idx).into() + AB::Expr::ONE,
+        ]
+        .into_iter()
+        .chain(local.compression_output::<AB>()),
+        *local.is_active * local.is_last_chain_step::<AB>(),
+    );
+}

@@ -14,7 +14,7 @@ use crate::{
 };
 use p3_air::{Air, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
 use p3_maybe_rayon::prelude::*;
-use p3_uni_stark_ext::{ProverInput, VerifierInput};
+use p3_uni_stark_ext::{InteractionAirBuilder, ProverInput, VerifierInput};
 use tracing::instrument;
 
 pub mod chain;
@@ -68,7 +68,7 @@ impl BaseAirWithPublicValues<F> for HashSigAggAir {
 
 impl<AB> Air<AB> for HashSigAggAir
 where
-    AB: AirBuilderWithPublicValues<F = F>,
+    AB: InteractionAirBuilder<F = F> + AirBuilderWithPublicValues,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {

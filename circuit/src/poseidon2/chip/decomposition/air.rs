@@ -1,20 +1,26 @@
 use crate::{
+    gadget::not,
     poseidon2::{
         F,
-        chip::decomposition::{
-            F_MS_LIMB, F_MS_LIMB_LEADING_ONES, F_MS_LIMB_TRAILING_ZEROS, LIMB_BITS, NUM_LIMBS,
-            NUM_MSG_HASH_LIMBS,
-            column::{DecompositionCols, NUM_DECOMPOSITION_COLS},
+        chip::{
+            Bus,
+            decomposition::{
+                F_MS_LIMB, F_MS_LIMB_LEADING_ONES, F_MS_LIMB_TRAILING_ZEROS, LIMB_BITS, NUM_LIMBS,
+                NUM_MSG_HASH_LIMBS,
+                column::{DecompositionCols, NUM_DECOMPOSITION_COLS},
+            },
         },
         hash_sig::{MSG_HASH_FE_LEN, TARGET_SUM},
     },
     util::zip,
 };
-use core::borrow::Borrow;
+use core::{borrow::Borrow, iter};
+use hash_sig_verifier::instantiation::poseidon2::CHUNK_SIZE;
 use itertools::Itertools;
-use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
+use p3_air::{Air, AirBuilder, BaseAir, BaseAirWithPublicValues};
 use p3_field::PrimeCharacteristicRing;
 use p3_matrix::Matrix;
+use p3_uni_stark_ext::InteractionAirBuilder;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DecompositionAir;
@@ -29,7 +35,7 @@ impl BaseAirWithPublicValues<F> for DecompositionAir {}
 
 impl<AB> Air<AB> for DecompositionAir
 where
-    AB: AirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionAirBuilder<F = F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
@@ -40,34 +46,47 @@ where
         let local: &DecompositionCols<AB::Var> = (*local).borrow();
         let next: &DecompositionCols<AB::Var> = (*next).borrow();
 
-        // When every row
-        eval_every_row(builder, local);
-        eval_decomposition_first_row(builder, local);
-        eval_decomposition_every_row(builder, local);
-        eval_decomposition_last_row(builder, local);
-
-        // When first row
-        {
-            let mut builder = builder.when_first_row();
-
-            builder.assert_one(local.inds[0]);
-            eval_acc_first_row(&mut builder, local);
-        }
-
-        // When transition
-        {
-            let mut builder = builder.when_transition();
-
-            eval_transition(&mut builder, local, next);
-            eval_acc_transition(&mut builder, local, next);
-            eval_acc_last_row(&mut builder, local, next);
-            eval_decomposition_transition(&mut builder, local, next);
+        if !AB::ONLY_INTERACTION {
+            eval_constriants(builder, local, next);
         }
 
         // Interaction
-        // send_chain(builder, local);
-        // send_range_check(builder, local);
-        // receive_decomposition(builder, local);
+        send_chain(builder, local);
+        send_range_check(builder, local);
+        receive_decomposition(builder, local);
+    }
+}
+
+#[inline]
+fn eval_constriants<AB>(
+    builder: &mut AB,
+    local: &DecompositionCols<AB::Var>,
+    next: &DecompositionCols<AB::Var>,
+) where
+    AB: AirBuilder<F = F>,
+{
+    // When every row
+    eval_every_row(builder, local);
+    eval_decomposition_first_row(builder, local);
+    eval_decomposition_every_row(builder, local);
+    eval_decomposition_last_row(builder, local);
+
+    // When first row
+    {
+        let mut builder = builder.when_first_row();
+
+        builder.assert_one(local.inds[0]);
+        eval_acc_first_row(&mut builder, local);
+    }
+
+    // When transition
+    {
+        let mut builder = builder.when_transition();
+
+        eval_transition(&mut builder, local, next);
+        eval_acc_transition(&mut builder, local, next);
+        eval_acc_last_row(&mut builder, local, next);
+        eval_decomposition_transition(&mut builder, local, next);
     }
 }
 
@@ -127,6 +146,15 @@ where
             cols.values[MSG_HASH_FE_LEN - 1 - idx],
             value_composed.clone(),
         );
+    });
+
+    zip!(
+        cols.decomposition_bits.chunks(CHUNK_SIZE),
+        cols.is_send_chain
+    )
+    .for_each(|(chunk, is_send_chain)| {
+        let is_chain_mid = not(chunk.iter().copied().map_into().product::<AB::Expr>());
+        builder.assert_eq(is_send_chain, cols.is_decomposition::<AB>() * is_chain_mid);
     });
 }
 
@@ -285,57 +313,58 @@ where
     builder.assert_eq(cols.sum, AB::Expr::from(AB::F::from_u16(TARGET_SUM)));
 }
 
-// #[inline]
-// fn send_range_check<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     for limb in cols
-//         .value_ls_limbs
-//         .iter()
-//         .chain(&cols.acc_limbs)
-//         .chain(&cols.carries)
-//     {
-//         builder.push_send(Bus::RangeCheck as usize, [*limb], cols.is_acc::<AB>());
-//     }
-// }
+fn send_chain<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    let i_offset = cols
+        .decomposition_inds()
+        .iter()
+        .enumerate()
+        .map(|(idx, ind)| (*ind).into() * AB::F::from_usize((LIMB_BITS / CHUNK_SIZE) * idx))
+        .sum::<AB::Expr>();
+    zip!(
+        cols.decomposition_bits.chunks(CHUNK_SIZE),
+        cols.is_send_chain
+    )
+    .enumerate()
+    .for_each(|(chunk_idx, (chunk, is_send_chain))| {
+        let chunk = chunk.iter().rev().copied().map_into();
+        builder.push_send(
+            Bus::Chain as usize,
+            [
+                cols.sig_idx.into(),
+                i_offset.clone() + F::from_usize(chunk_idx),
+                chunk.reduce(|acc, bit| acc.double() + bit).unwrap(),
+            ],
+            is_send_chain,
+        );
+    });
+}
 
-// fn send_chain<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     let i_offset = cols
-//         .decomposition_inds()
-//         .iter()
-//         .enumerate()
-//         .map(|(idx, ind)| (*ind).into() * AB::F::from_canonical_usize_int((LIMB_BITS / CHUNK_SIZE) * idx))
-//         .sum::<AB::Expr>();
-//     cols.decomposition_bits
-//         .chunks(CHUNK_SIZE)
-//         .enumerate()
-//         .for_each(|(chunk_idx, chunk)| {
-//             let chunk = chunk.iter().rev().copied().map_into();
-//             let is_chain_mid = not(chunk.clone().product::<AB::Expr>());
-//             builder.push_send(
-//                 Bus::Chain as usize,
-//                 [
-//                     cols.sig_idx.into(),
-//                     i_offset.clone() + AB::Expr::from_AB::F::from_u16(canonical_usize)(chunk_idx),
-//                     chunk.reduce(|acc, bit| acc.double() + bit).unwrap(),
-//                 ],
-//                 cols.is_decomposition::<AB>() * is_chain_mid,
-//             );
-//         });
-// }
+#[inline]
+fn send_range_check<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    for limb in cols
+        .value_ls_limbs
+        .iter()
+        .chain(&cols.acc_limbs)
+        .chain(&cols.carries)
+    {
+        builder.push_send(Bus::RangeCheck as usize, [*limb], cols.is_acc::<AB>());
+    }
+}
 
-// #[inline]
-// fn receive_decomposition<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
-// where
-//     AB: InteractionBuilder<F = F>,
-// {
-//     builder.push_receive(
-//         Bus::Decomposition as usize,
-//         iter::once(cols.sig_idx).chain(cols.values),
-//         cols.is_acc_last_row::<AB>(),
-//     );
-// }
+#[inline]
+fn receive_decomposition<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
+where
+    AB: InteractionAirBuilder<F = F>,
+{
+    builder.push_receive(
+        Bus::Decomposition as usize,
+        iter::once(cols.sig_idx).chain(cols.values),
+        cols.is_acc_last_row::<AB>(),
+    );
+}

@@ -41,6 +41,8 @@ pub struct DecompositionCols<T> {
     pub carries: [T; NUM_MSG_HASH_LIMBS - 1],
     /// Bit decomposition of `acc_limbs[decomposition_step]` in little-endian.
     pub decomposition_bits: [T; LIMB_BITS],
+    /// `is_decomposition * is_chain_mid`
+    pub is_send_chain: [T; LIMB_BITS / CHUNK_SIZE],
     /// Sum of decomposed chunks.
     pub sum: T,
 }

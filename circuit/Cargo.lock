@@ -225,6 +225,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b7914353092ddf589ad78f25c5c1c21b7f80b0ff8621e7c814c3485b5306da9d"
 
 [[package]]
+name = "foldhash"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a0d2fde1f7b3d48b8395d5f2de76c18a528bd6a9cdde438df747bfcba3e05d6f"
+
+[[package]]
 name = "forward_ref"
 version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -320,6 +326,15 @@ dependencies = [
  "serde",
  "serde-big-array",
  "sha3",
+]
+
+[[package]]
+name = "hashbrown"
+version = "0.15.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bf151400ff0baff5465007dd2f3e717f3fe502074ca563069ce3a6629d07b289"
+dependencies = [
+ "foldhash",
 ]
 
 [[package]]
@@ -723,8 +738,9 @@ dependencies = [
 [[package]]
 name = "p3-uni-stark-ext"
 version = "0.1.0"
-source = "git+https://github.com/han0110/p3-playground.git#2e55f1ebb1ea3f672daebc8225a512c0fb575376"
+source = "git+https://github.com/han0110/p3-playground.git?branch=feature%2Finteraction#9d250c94c8df31ecb7e4e4030bf5756c0977372a"
 dependencies = [
+ "hashbrown",
  "itertools",
  "p3-air",
  "p3-challenger",
