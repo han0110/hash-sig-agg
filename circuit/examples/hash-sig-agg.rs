@@ -29,6 +29,7 @@ fn main() {
     let engine = Engine::<F, E>::new(args.log_blowup, args.proof_of_work_bits);
     let vi = mock_vi(1 << args.log_signatures);
     let verifier_inputs = verifier_inputs(vi.epoch, vi.msg);
+    let (vk, pk) = engine.keygen(&verifier_inputs);
 
     // Warm up
     {
@@ -36,7 +37,7 @@ fn main() {
         while elapsed.as_secs() < 3 {
             let start = Instant::now();
             let prover_inputs = generate_prover_inputs(args.log_blowup, vi.clone());
-            engine.prove(prover_inputs.clone());
+            engine.prove(&pk, prover_inputs.clone());
             elapsed += start.elapsed();
         }
     }
@@ -53,7 +54,7 @@ fn main() {
     let start = Instant::now();
     let prover_inputs = generate_prover_inputs(args.log_blowup, vi);
     let witgen_time = start.elapsed();
-    let proof = engine.prove(prover_inputs);
+    let proof = engine.prove(&pk, prover_inputs);
     let proving_time = start.elapsed();
     let proving_time_parts = proving_time_parts(
         proving_time,
@@ -62,7 +63,7 @@ fn main() {
     );
 
     let start = Instant::now();
-    engine.verify(verifier_inputs, &proof).unwrap();
+    engine.verify(&vk, verifier_inputs, &proof).unwrap();
     let verifying_time = start.elapsed();
 
     let throughput = f64::from(1 << args.log_signatures) / proving_time.as_secs_f64();

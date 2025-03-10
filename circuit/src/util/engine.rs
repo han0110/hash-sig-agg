@@ -1,6 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds, clippy::multiple_bound_locations)]
 
-use p3_air::Air;
+use p3_air::{Air, BaseAirWithPublicValues};
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
@@ -10,8 +10,9 @@ use p3_keccak::{Keccak256Hash, KeccakF, VECTOR_LEN};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
 use p3_uni_stark_ext::{
-    PcsError, Proof, ProverConstraintFolder, ProverInput, ProverInteractionFolder, StarkConfig,
-    SymbolicAirBuilder, VerificationError, VerifierConstraintFolder, VerifierInput, prove, verify,
+    PcsError, Proof, ProverConstraintFolder, ProverInput, ProverInteractionFolder, ProvingKey,
+    StarkConfig, SymbolicAirBuilder, VerificationError, VerifierConstraintFolder, VerifierInput,
+    VerifyingKey, keygen, prove, verify,
 };
 
 type U64Hash = PaddingFreeSponge<KeccakF, 25, 17, 4>;
@@ -79,11 +80,25 @@ where
         &self.config
     }
 
+    pub fn keygen<'a, A>(
+        &self,
+        inputs: impl IntoIterator<Item = &'a VerifierInput<F, A>>,
+    ) -> (VerifyingKey, ProvingKey)
+    where
+        A: 'a + BaseAirWithPublicValues<F> + Air<SymbolicAirBuilder<F>>,
+    {
+        keygen(
+            (1 << self.log_blowup) + 1,
+            inputs.into_iter().map(VerifierInput::air),
+        )
+    }
+
     pub fn prove<
         #[cfg(feature = "check-constraints")] A: for<'a> Air<p3_uni_stark_ext::DebugConstraintBuilder<'a, F>>,
         #[cfg(not(feature = "check-constraints"))] A,
     >(
         &self,
+        pk: &ProvingKey,
         inputs: Vec<ProverInput<F, A>>,
     ) -> Proof<Config<F, E>>
     where
@@ -92,11 +107,12 @@ where
             + for<'a> Air<ProverInteractionFolder<'a, Config<F, E>>>,
     {
         let mut challenger = new_challenger();
-        prove(self.config(), inputs, &mut challenger)
+        prove(self.config(), pk, inputs, &mut challenger)
     }
 
     pub fn verify<A>(
         &self,
+        vk: &VerifyingKey,
         inputs: Vec<VerifierInput<F, A>>,
         proof: &Proof<Config<F, E>>,
     ) -> Result<(), VerificationError<PcsError<Config<F, E>>>>
@@ -104,7 +120,7 @@ where
         A: Air<SymbolicAirBuilder<F>> + for<'a> Air<VerifierConstraintFolder<'a, Config<F, E>>>,
     {
         let mut challenger = new_challenger();
-        verify(self.config(), inputs, &mut challenger, proof)
+        verify(self.config(), vk, inputs, &mut challenger, proof)
     }
 
     #[cfg(test)]
@@ -116,13 +132,15 @@ where
         prover_inputs: Vec<ProverInput<F, A>>,
     ) where
         A: Clone
+            + BaseAirWithPublicValues<F>
             + Air<SymbolicAirBuilder<F>>
             + for<'a> Air<ProverConstraintFolder<'a, Config<F, E>>>
             + for<'a> Air<ProverInteractionFolder<'a, Config<F, E>>>
             + for<'a> Air<VerifierConstraintFolder<'a, Config<F, E>>>,
     {
         let verifier_inputs = prover_inputs.iter().map(|v| (**v).clone()).collect();
-        let proof = self.prove(prover_inputs);
-        self.verify(verifier_inputs, &proof).unwrap();
+        let (vk, pk) = self.keygen(&verifier_inputs);
+        let proof = self.prove(&pk, prover_inputs);
+        self.verify(&vk, verifier_inputs, &proof).unwrap();
     }
 }

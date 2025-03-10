@@ -7,9 +7,9 @@ for i, r in enumerate([1, 2, 3]):
         try:
             path = f"report/r{r}_t{t}"
             lines = open(path).readlines()
-            if len(lines) != 13:
+            if len(lines) != 7:
                 raise Exception
-            report = [lines[k].strip().split(": ")[1] for k in [0, 9, 10, 11, 12]]
+            report = [lines[k].strip().split(": ")[1] for k in [0, 3, 4, 5, 6]]
         except Exception:
             report = ["-", "-", "-", "-", "-"]
         (time, throughput, proof_size, verifying_time, peak_mem) = report

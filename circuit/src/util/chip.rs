@@ -1,4 +1,4 @@
-use p3_air::Air;
+use p3_air::{Air, BaseAirWithPublicValues};
 use p3_field::Field;
 use p3_matrix::dense::RowMajorMatrix;
 use p3_uni_stark_ext::{ProverInput, SymbolicAirBuilder, VerifierInput};
@@ -16,7 +16,7 @@ pub trait Chip<Val> {
     fn verifier_input(&self) -> VerifierInput<Val, Self::Air>
     where
         Val: Field,
-        Self::Air: Air<SymbolicAirBuilder<Val>>,
+        Self::Air: BaseAirWithPublicValues<Val> + Air<SymbolicAirBuilder<Val>>,
     {
         VerifierInput::new(self.air(), self.public_values())
     }
@@ -28,7 +28,7 @@ pub trait Chip<Val> {
     fn generate_prover_input(&self, interaction: &Self::Interaction) -> ProverInput<Val, Self::Air>
     where
         Val: Field,
-        Self::Air: Air<SymbolicAirBuilder<Val>>,
+        Self::Air: BaseAirWithPublicValues<Val> + Air<SymbolicAirBuilder<Val>>,
     {
         ProverInput::new(
             self.air(),
