@@ -8,7 +8,7 @@ pub struct MockAirBuilder {
 }
 
 impl MockAirBuilder {
-    pub fn new() -> Self {
+    pub const fn new() -> Self {
         Self {
             constraints: Vec::new(),
         }

@@ -166,7 +166,7 @@ fn generate_path_rows(
             }
             let input = concat_array![
                 trace.pk.parameter,
-                encode_tweak_merkle_tree((level as u8 + 1).into(), epoch_dec >> 1),
+                encode_tweak_merkle_tree(level as u8 + 1, epoch_dec >> 1),
                 if is_right {
                     [sibling, node].into_iter().flatten()
                 } else {
