@@ -1,14 +1,14 @@
-name: CI circuit-openvm
+name: CI circuit
 
 defaults:
   run:
-    working-directory: ./circuit/openvm
+    working-directory: ./circuit
 
 on:
   pull_request:
     paths:
-      - "hash-sig/**"
-      - "circuit/openvm/**"
+      - 'hash-sig/**'
+      - 'circuit/**'
   push:
     branches:
       - main
@@ -21,9 +21,9 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly-2025-02-20
+          toolchain: stable
 
       - uses: Swatinem/rust-cache@v2
         with:
@@ -39,13 +39,10 @@ jobs:
       - uses: actions/checkout@v4
 
       - name: Install toolchain
-        uses: dtolnay/rust-toolchain@nightly
+        uses: dtolnay/rust-toolchain@stable
         with:
-          toolchain: nightly-2025-02-20
+          toolchain: stable
           components: rust-docs, rustfmt, clippy
-
-      - name: Override rustup version
-        run: rustup override set nightly-2025-02-20
 
       - uses: Swatinem/rust-cache@v2
         with:
