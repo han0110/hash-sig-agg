@@ -1563,6 +1563,7 @@ dependencies = [
 [[package]]
 name = "hash-sig-testdata"
 version = "0.1.0"
+source = "git+https://github.com/han0110/hash-sig-agg?branch=legacy#1cc218288d6eefbececa4d72de46bacf3cc874c4"
 dependencies = [
  "bincode",
  "hash-sig-verifier",
@@ -1573,6 +1574,7 @@ dependencies = [
 [[package]]
 name = "hash-sig-verifier"
 version = "0.1.0"
+source = "git+https://github.com/han0110/hash-sig-agg?branch=legacy#1cc218288d6eefbececa4d72de46bacf3cc874c4"
 dependencies = [
  "num-bigint 0.4.6",
  "p3-baby-bear",
@@ -3326,6 +3328,7 @@ dependencies = [
 [[package]]
 name = "p3-poseidon2-util"
 version = "0.1.0"
+source = "git+https://github.com/han0110/hash-sig-agg?branch=legacy#1cc218288d6eefbececa4d72de46bacf3cc874c4"
 dependencies = [
  "p3-baby-bear",
  "p3-field",

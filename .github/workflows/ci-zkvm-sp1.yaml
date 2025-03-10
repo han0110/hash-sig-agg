@@ -7,7 +7,6 @@ defaults:
 on:
   pull_request:
     paths:
-      - 'hash-sig/**'
       - 'zkvm/sp1/**'
   push:
     branches:
