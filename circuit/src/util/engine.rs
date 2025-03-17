@@ -1,11 +1,12 @@
 #![allow(clippy::type_repetition_in_bounds, clippy::multiple_bound_locations)]
 
+use core::str::FromStr;
 use p3_air::{Air, BaseAirWithPublicValues};
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
 use p3_dft::Radix2DitParallel;
 use p3_field::{ExtensionField, PrimeField32, TwoAdicField};
-use p3_fri::{FriConfig, TwoAdicFriPcs};
+use p3_fri_ext::{FriConfig, TwoAdicFriPcsSharedCap};
 use p3_keccak::{Keccak256Hash, KeccakF, VECTOR_LEN};
 use p3_merkle_tree::MerkleTreeMmcs;
 use p3_symmetric::{CompressionFunctionFromHasher, PaddingFreeSponge, SerializingHasher32To64};
@@ -23,11 +24,39 @@ type ChallengeMmcs<F, E> = ExtensionMmcs<F, E, ValMmcs<F>>;
 type ByteHash = Keccak256Hash;
 type Challenger<F> = SerializingChallenger32<F, HashChallenger<u8, ByteHash, 32>>;
 type Dft<F> = Radix2DitParallel<F>;
-type Pcs<F, E> = TwoAdicFriPcs<F, Dft<F>, ValMmcs<F>, ChallengeMmcs<F, E>>;
+type Pcs<F, E> = TwoAdicFriPcsSharedCap<F, Dft<F>, ValMmcs<F>, ChallengeMmcs<F, E>, [u64; 4]>;
 pub type Config<F, E> = StarkConfig<Pcs<F, E>, E, Challenger<F>>;
 
 const fn new_challenger<F: PrimeField32>() -> Challenger<F> {
     Challenger::from_hasher(vec![], ByteHash {})
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum SoundnessType {
+    Provable,
+    Conjecture,
+}
+
+impl FromStr for SoundnessType {
+    type Err = ();
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(match s {
+            "provable" => Self::Provable,
+            "conjecture" => Self::Conjecture,
+            _ => unreachable!(),
+        })
+    }
+}
+
+impl SoundnessType {
+    // TODO: Calculate accurate number of queries.
+    pub const fn num_queries(&self, log_blowup: usize, proof_of_work_bits: usize) -> usize {
+        match self {
+            Self::Provable => usize::div_ceil(2 * (128 - proof_of_work_bits), log_blowup),
+            Self::Conjecture => usize::div_ceil(128 - proof_of_work_bits, log_blowup),
+        }
+    }
 }
 
 pub struct Engine<F, E> {
@@ -40,19 +69,24 @@ where
     F: PrimeField32 + TwoAdicField,
     E: ExtensionField<F> + TwoAdicField,
 {
-    pub fn new(log_blowup: usize, proof_of_work_bits: usize) -> Self {
+    pub fn new(
+        log_blowup: usize,
+        proof_of_work_bits: usize,
+        soundness_type: SoundnessType,
+    ) -> Self {
         let u64_hash = U64Hash::new(KeccakF {});
         let field_hash = FieldHash::new(u64_hash);
         let compress = Compress::new(u64_hash);
         let val_mmcs = ValMmcs::new(field_hash, compress);
         let challenge_mmcs = ChallengeMmcs::new(val_mmcs.clone());
         let dft = Dft::default();
-        let num_queries = usize::div_ceil(2 * (128 - proof_of_work_bits), log_blowup);
+        let num_queries = soundness_type.num_queries(log_blowup, proof_of_work_bits);
         let fri_config = FriConfig {
             log_blowup,
             log_final_poly_len: 3,
             num_queries,
             proof_of_work_bits,
+            arity_bits: 3,
             mmcs: challenge_mmcs,
         };
         let pcs = Pcs::new(dft, val_mmcs, fri_config);
@@ -63,7 +97,7 @@ where
     }
 
     pub fn fastest() -> Self {
-        Self::new(1, 0)
+        Self::new(1, 0, SoundnessType::Provable)
     }
 
     pub const fn log_blowup(&self) -> usize {

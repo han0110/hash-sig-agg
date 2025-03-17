@@ -12,7 +12,7 @@ p3-challenger = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-commit = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-dft = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-field = { git = "https://github.com/Plonky3/Plonky3.git" }
-p3-fri = { git = "https://github.com/Plonky3/Plonky3.git" }
+p3-fri-ext = { git = "https://github.com/han0110/p3-playground.git" }
 p3-keccak = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3.git" }
@@ -35,6 +35,9 @@ tracing-forest = { version = "0.1.6", features = ["smallvec"] }
 tracing-subscriber = { version = "0.3.17", features = ["std", "env-filter"] }
 
 hash-sig-testdata = { path = "../hash-sig/hash-sig-testdata" }
+
+[target.'cfg(not(target_env = "msvc"))'.dev-dependencies]
+tikv-jemallocator = "0.6"
 
 [features]
 check-constraints = ["p3-uni-stark-ext/check-constraints"]

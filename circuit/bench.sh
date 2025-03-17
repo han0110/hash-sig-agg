@@ -16,6 +16,8 @@ measure_peak_memory() {
 
 mkdir -p report
 
+export JEMALLOC_SYS_WITH_MALLOC_CONF="retain:true,background_thread:true,metadata_thp:always,dirty_decay_ms:-1,muzzy_decay_ms:-1,abort_conf:true"
+
 for R in 1 2 3; do for T in 4 8 16 24; do
     export RAYON_NUM_THREADS=$T
     OUTPUT="report/r${R}_t${T}"

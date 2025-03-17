@@ -1,4 +1,4 @@
-use clap::Parser;
+use clap::{Parser, builder::PossibleValuesParser};
 use core::fmt::Write;
 use hash_sig_agg_circuit_openvm::{
     poseidon2::{
@@ -12,6 +12,10 @@ use std::time::{Duration, Instant};
 use tracing_forest::{ForestLayer, util::LevelFilter};
 use tracing_subscriber::{EnvFilter, Registry, prelude::*};
 
+#[cfg(not(target_env = "msvc"))]
+#[global_allocator]
+static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
+
 #[derive(Clone, Debug, clap::Parser)]
 #[command(version, about)]
 struct Args {
@@ -21,12 +25,18 @@ struct Args {
     log_signatures: usize,
     #[arg(long, short = 'p', default_value_t = 0)]
     proof_of_work_bits: usize,
+    #[arg(long, short = 's', default_value_t = String::from("provable"), value_parser = PossibleValuesParser::new(["provable", "conjecture"]))]
+    soundness_type: String,
 }
 
 fn main() {
     let args: Args = Parser::parse();
 
-    let engine = Engine::<F, E>::new(args.log_blowup, args.proof_of_work_bits);
+    let engine = Engine::<F, E>::new(
+        args.log_blowup,
+        args.proof_of_work_bits,
+        args.soundness_type.parse().unwrap(),
+    );
     let vi = mock_vi(1 << args.log_signatures);
     let verifier_inputs = verifier_inputs(vi.epoch, vi.msg);
     let (vk, pk) = engine.keygen(&verifier_inputs);
