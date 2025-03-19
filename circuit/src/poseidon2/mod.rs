@@ -10,6 +10,7 @@ pub mod baby_bear {
         HALF_FULL_ROUNDS, RC16, RC24, SBOX_DEGREE, partial_round,
     };
     pub type E = p3_field::extension::BinomialExtensionField<F, 5>; // FIXME: Use higher degree when possible.
+    pub type Poseidon2<const WIDTH: usize> = p3_baby_bear::Poseidon2BabyBear<WIDTH>;
     pub type Poseidon2LinearLayers<const WIDTH: usize> =
         p3_poseidon2_util::instantiation::horizon::Poseidon2LinearLayersHorizon<F, WIDTH>;
     pub const SBOX_REGISTERS: usize = 1;
@@ -22,6 +23,7 @@ pub mod koala_bear {
         HALF_FULL_ROUNDS, RC16, RC24, SBOX_DEGREE, partial_round,
     };
     pub type E = p3_field::extension::BinomialExtensionField<F, 4>; // FIXME: Use higher degree when possible.
+    pub type Poseidon2<const WIDTH: usize> = p3_koala_bear::Poseidon2KoalaBear<WIDTH>;
     pub type Poseidon2LinearLayers<const WIDTH: usize> =
         p3_poseidon2_util::instantiation::horizon::Poseidon2LinearLayersHorizon<F, WIDTH>;
     pub const SBOX_REGISTERS: usize = 0;

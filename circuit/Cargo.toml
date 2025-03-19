@@ -12,7 +12,6 @@ p3-challenger = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-commit = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-dft = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-field = { git = "https://github.com/Plonky3/Plonky3.git" }
-p3-fri-ext = { git = "https://github.com/han0110/p3-playground.git" }
 p3-keccak = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-koala-bear = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-matrix = { git = "https://github.com/Plonky3/Plonky3.git" }
@@ -22,8 +21,10 @@ p3-poseidon2 = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-poseidon2-air = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-sha256 = { git = "https://github.com/Plonky3/Plonky3.git" }
 p3-symmetric = { git = "https://github.com/Plonky3/Plonky3.git" }
-p3-uni-stark-ext = { git = "https://github.com/han0110/p3-playground.git" }
 tracing = "0.1.41"
+
+p3-fri-ext = { git = "https://github.com/han0110/p3-playground.git" }
+p3-uni-stark-ext = { git = "https://github.com/han0110/p3-playground.git" }
 
 hash-sig-verifier = { path = "../hash-sig/hash-sig-verifier" }
 p3-poseidon2-util = { path = "../hash-sig/p3-poseidon2-util", features = ["air"] }

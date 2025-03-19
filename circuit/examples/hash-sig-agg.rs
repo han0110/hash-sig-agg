@@ -1,16 +1,16 @@
 use clap::{Parser, builder::PossibleValuesParser};
-use core::fmt::Write;
+use core::fmt::Debug;
 use hash_sig_agg_circuit_openvm::{
     poseidon2::{
-        E, F,
+        F,
         chip::{generate_prover_inputs, verifier_inputs},
     },
-    util::engine::Engine,
+    util::engine::{Engine, EngineConfig, keccak::KeccakConfig, poseidon2::Poseidon2Config},
 };
 use hash_sig_testdata::mock_vi;
-use std::time::{Duration, Instant};
-use tracing_forest::{ForestLayer, util::LevelFilter};
-use tracing_subscriber::{EnvFilter, Registry, prelude::*};
+use p3_commit::{Pcs, PolynomialSpace};
+use std::time::Instant;
+use util::{human_size, human_time, init_tracing, proving_time_components};
 
 #[cfg(not(target_env = "msvc"))]
 #[global_allocator]
@@ -19,6 +19,8 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[derive(Clone, Debug, clap::Parser)]
 #[command(version, about)]
 struct Args {
+    #[arg(long, short = 'm', default_value_t = String::from("keccak"), value_parser = PossibleValuesParser::new(["keccak", "poseidon2"]))]
+    pcs_merkle_hash: String,
     #[arg(long, short = 'r', default_value_t = 1)]
     log_blowup: usize,
     #[arg(long, short = 'l', default_value_t = 13)]
@@ -30,126 +32,204 @@ struct Args {
 }
 
 fn main() {
-    let args: Args = Parser::parse();
+    let Args {
+        pcs_merkle_hash,
+        log_blowup,
+        log_signatures,
+        proof_of_work_bits,
+        soundness_type,
+    }: Args = Parser::parse();
+    let soundness_type = soundness_type.parse().unwrap();
+    let log_final_poly_len = log_signatures.saturating_sub(1).min(3);
 
-    let engine = Engine::<F, E>::new(
-        args.log_blowup,
-        args.proof_of_work_bits,
-        args.soundness_type.parse().unwrap(),
-    );
-    let vi = mock_vi(1 << args.log_signatures);
+    match pcs_merkle_hash.as_str() {
+        "keccak" => {
+            let engine = Engine::<KeccakConfig>::new(
+                log_blowup,
+                log_final_poly_len,
+                proof_of_work_bits,
+                soundness_type,
+            );
+            run(&engine, log_signatures);
+        }
+        "poseidon2" => {
+            let engine = Engine::<Poseidon2Config>::new(
+                log_blowup,
+                log_final_poly_len,
+                proof_of_work_bits,
+                soundness_type,
+            );
+            run(&engine, log_signatures);
+        }
+        _ => unreachable!(),
+    }
+}
+
+fn run<C: EngineConfig>(engine: &Engine<C>, log_signatures: usize)
+where
+    <C::Pcs as Pcs<C::Challenge, C::Challenger>>::Domain: PolynomialSpace<Val = F>,
+{
+    let vi = mock_vi(1 << log_signatures);
     let verifier_inputs = verifier_inputs(vi.epoch, vi.msg);
     let (vk, pk) = engine.keygen(&verifier_inputs);
 
     // Warm up
     {
-        let mut elapsed = Duration::default();
-        while elapsed.as_secs() < 3 {
-            let start = Instant::now();
-            let prover_inputs = generate_prover_inputs(args.log_blowup, vi.clone());
-            engine.prove(&pk, prover_inputs.clone());
-            elapsed += start.elapsed();
+        let start = Instant::now();
+        while Instant::now().duration_since(start).as_secs() < 3 {
+            engine.prove(&pk, generate_prover_inputs(engine.log_blowup(), vi.clone()));
         }
     }
 
-    let env_filter = EnvFilter::builder()
-        .with_default_directive(LevelFilter::WARN.into())
-        .from_env_lossy();
-
-    Registry::default()
-        .with(env_filter)
-        .with(ForestLayer::default())
-        .init();
+    init_tracing();
 
     let start = Instant::now();
-    let prover_inputs = generate_prover_inputs(args.log_blowup, vi);
-    let witgen_time = start.elapsed();
+    let prover_inputs = generate_prover_inputs(engine.log_blowup(), vi);
     let proof = engine.prove(&pk, prover_inputs);
     let proving_time = start.elapsed();
-    let proving_time_parts = proving_time_parts(
-        proving_time,
-        witgen_time,
-        // snapshotter.snapshot()
-    );
+    let proving_time_components = proving_time_components(proving_time);
 
     let start = Instant::now();
     engine.verify(&vk, verifier_inputs, &proof).unwrap();
     let verifying_time = start.elapsed();
 
-    let throughput = f64::from(1 << args.log_signatures) / proving_time.as_secs_f64();
-    let proving_time = human_time(proving_time);
+    let throughput = (f64::from(1 << log_signatures) / proving_time.as_secs_f64()).floor();
+    let proving_time = human_time(proving_time.as_nanos());
     let proof_size = human_size(bincode::serialize(&proof).unwrap().len());
-    let verifying_time = human_time(verifying_time);
+    let verifying_time = human_time(verifying_time.as_nanos());
 
-    println!(
-        r"proving time: {proving_time}
-{proving_time_parts}
-throughput: {throughput:.2} sig/s
-proof_size: {proof_size}
-verifying time: {verifying_time}",
-    );
-}
-
-fn proving_time_parts(
-    proving: Duration,
-    witgen: Duration,
-    // snapshot: Snapshot
-) -> String {
-    // #[allow(clippy::mutable_key_type)]
-    // let snapshot = snapshot.into_hashmap();
-
-    // let metric = |key_name| {
-    //     let key = CompositeKey::new(MetricKind::Gauge, Key::from_name(key_name));
-    //     match snapshot[&key].2 {
-    //         #[allow(clippy::cast_sign_loss)]
-    //         DebugValue::Gauge(value) => Duration::from_millis(value.0 as u64),
-    //         _ => unreachable!(),
-    //     }
-    // };
-    let mut parts = vec![("witgen", witgen)];
-    // parts.extend(
-    //     [
-    //         ("commit_main", "main_trace_commit_time_ms"),
-    //         ("compute_perm", "generate_perm_trace_time_ms"),
-    //         ("commit_perm", "perm_trace_commit_time_ms"),
-    //         ("compute_quot", "quotient_poly_compute_time_ms"),
-    //         ("commit_quot", "quotient_poly_commit_time_ms"),
-    //         ("opening", "pcs_opening_time_ms"),
-    //     ]
-    //     .map(|(name, key_name)| (name, metric(key_name))),
-    // );
-    parts.push(("rest", proving - parts.iter().map(|(_, time)| time).sum()));
-
-    let ratio = |time: Duration| 100.0 * time.as_secs_f64() / proving.as_secs_f64();
-    let mut s = String::new();
-    for (idx, (name, time)) in parts.into_iter().enumerate() {
-        s.extend((idx > 0).then_some('\n'));
-        let ratio = ratio(time);
-        let time = human_time(time);
-        write!(&mut s, "  {name}: {time} ({ratio:.2}%)",).unwrap();
+    println!("proving time: {proving_time}");
+    if let Some(proving_time_components) = proving_time_components {
+        println!("{proving_time_components}");
     }
-    s
+    println!("throughput: {throughput} sig/s");
+    println!("proof size: {proof_size}");
+    println!("verifying time: {verifying_time}");
 }
 
-fn human_time(time: Duration) -> String {
-    let time = time.as_nanos();
-    if time < 1_000 {
-        format!("{time} ns")
-    } else if time < 1_000_000 {
-        format!("{:.2} µs", time as f64 / 1_000.0)
-    } else if time < 1_000_000_000 {
-        format!("{:.2} ms", time as f64 / 1_000_000.0)
-    } else {
-        format!("{:.2} s", time as f64 / 1_000_000_000.0)
+mod util {
+    use core::{
+        fmt::{Debug, Write},
+        iter::Sum,
+        sync::atomic::{AtomicU64, Ordering},
+        time::Duration,
+    };
+    use itertools::{chain, izip};
+    use tracing_forest::{
+        ForestLayer, PrettyPrinter, Processor,
+        tree::{Span, Tree},
+        util::LevelFilter,
+    };
+    use tracing_subscriber::{EnvFilter, Registry, prelude::*};
+
+    pub fn init_tracing() {
+        let env_filter = EnvFilter::builder()
+            .with_default_directive(LevelFilter::WARN.into())
+            .from_env_lossy();
+
+        Registry::default()
+            .with(env_filter)
+            .with(ForestLayer::from(ProvingTimeComponents))
+            .init();
     }
-}
 
-pub fn human_size(size: usize) -> String {
-    if size < 1 << 10 {
-        format!("{size} B")
-    } else if size < 1 << 20 {
-        format!("{:.2} kB", size as f64 / 2f64.powi(10))
-    } else {
-        format!("{:.2} MB", size as f64 / 2f64.powi(20))
+    pub fn human_time(time: impl TryInto<u64, Error: Debug>) -> String {
+        let time = time.try_into().unwrap();
+        if time < 1_000 {
+            format!("{time} ns")
+        } else if time < 1_000_000 {
+            format!("{:.2} µs", time as f64 / 1_000.0)
+        } else if time < 1_000_000_000 {
+            format!("{:.2} ms", time as f64 / 1_000_000.0)
+        } else {
+            format!("{:.2} s", time as f64 / 1_000_000_000.0)
+        }
+    }
+
+    pub fn human_size(size: usize) -> String {
+        if size < 1 << 10 {
+            format!("{size} B")
+        } else if size < 1 << 20 {
+            format!("{:.2} kB", size as f64 / 2f64.powi(10))
+        } else {
+            format!("{:.2} MB", size as f64 / 2f64.powi(20))
+        }
+    }
+
+    pub struct ProvingTimeComponents;
+
+    impl Processor for ProvingTimeComponents {
+        fn process(&self, tree: Tree) -> tracing_forest::processor::Result {
+            match &tree {
+                Tree::Event(_) => {}
+                Tree::Span(span) => Self::process_span(span),
+            }
+            PrettyPrinter::new().process(tree)
+        }
+    }
+
+    static PROVING_TIME_COMPONENTS: [AtomicU64; 7] = [const { AtomicU64::new(0) }; 7];
+
+    impl ProvingTimeComponents {
+        fn process_span(span: &Span) {
+            let idx = match span.name() {
+                "generate hash-sig aggregation traces" => Some(0),
+                "commit to main data" => Some(1),
+                "compute log up traces" => Some(2),
+                "commit to log up data" => Some(3),
+                "compute quotient polynomials" => Some(4),
+                "commit to quotient poly chunks" => Some(5),
+                "open" => Some(6),
+                _ => None,
+            };
+            if let Some(idx) = idx {
+                PROVING_TIME_COMPONENTS[idx].store(
+                    u64::try_from(span.total_duration().as_nanos()).unwrap(),
+                    Ordering::Relaxed,
+                );
+            }
+            span.nodes().iter().for_each(|tree| match tree {
+                Tree::Event(_) => {}
+                Tree::Span(span) => Self::process_span(span),
+            });
+        }
+    }
+
+    pub fn proving_time_components(proving_time: Duration) -> Option<String> {
+        let names = [
+            "trace_gen main",
+            "commit main",
+            "trace_gen log_up",
+            "commit log_up",
+            "trace_gen quotient",
+            "commit quotient",
+            "open",
+            "rest",
+        ];
+        let components = PROVING_TIME_COMPONENTS
+            .each_ref()
+            .map(|v| v.load(Ordering::Relaxed));
+        if components.iter().all(|v| *v == 0) {
+            return None;
+        }
+
+        let proving_time = u64::try_from(proving_time.as_nanos()).unwrap();
+        let rest = proving_time - u64::sum(components.iter());
+
+        let ratio = |time| 100.0 * time as f64 / proving_time as f64;
+        izip!(names, chain![components, [rest]])
+            .enumerate()
+            .fold(String::new(), |mut s, (idx, (name, time))| {
+                s.extend((idx > 0).then_some('\n'));
+                let ratio = ratio(time);
+                let time = human_time(time);
+                let indent = String::from_iter([
+                    if idx == 7 { "└" } else { "├" },
+                    "─".repeat(19 - name.len()).as_str(),
+                ]);
+                write!(&mut s, "  {indent} {name} [ {time:>9} | {ratio:>5.2}% ]").unwrap();
+                s
+            })
+            .into()
     }
 }

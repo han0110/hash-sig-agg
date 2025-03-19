@@ -150,13 +150,13 @@ pub fn verifier_inputs(epoch: u32, msg: [u8; MSG_LEN]) -> Vec<VerifierInput<F, H
 #[cfg(test)]
 mod test {
     use crate::{
-        poseidon2::{E, F, chip::generate_prover_inputs, hash_sig::test::mock_vi},
-        util::engine::Engine,
+        poseidon2::{chip::generate_prover_inputs, hash_sig::test::mock_vi},
+        util::engine::{Engine, keccak::KeccakConfig},
     };
 
     #[test]
     fn chip() {
-        let engine = Engine::<F, E>::fastest();
+        let engine = Engine::<KeccakConfig>::fastest();
         for log_sigs in 4..8 {
             let vi = mock_vi(1 << log_sigs);
             let inputs = generate_prover_inputs(engine.log_blowup(), vi);

@@ -6,10 +6,21 @@ for i, r in enumerate([1, 2, 3]):
     for t in [4, 8, 16, 24]:
         try:
             path = f"report/r{r}_t{t}"
-            lines = open(path).readlines()
-            if len(lines) != 7:
-                raise Exception
-            report = [lines[k].strip().split(": ")[1] for k in [0, 3, 4, 5, 6]]
+            lines = open(path).readlines()[-13:]
+            report = [
+                next(
+                    line.rstrip().split(": ")[1]
+                    for line in lines
+                    if line.startswith(name)
+                )
+                for name in [
+                    "proving time",
+                    "throughput",
+                    "proof size",
+                    "verifying time",
+                    "peak mem",
+                ]
+            ]
         except Exception:
             report = ["-", "-", "-", "-", "-"]
         (time, throughput, proof_size, verifying_time, peak_mem) = report
