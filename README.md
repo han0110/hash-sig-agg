@@ -19,19 +19,19 @@ Usage: hash-sig-agg [OPTIONS]
 
 Options:
   -i, --piop <PIOP>
-          [default: univariate] [possible values: univariate, multilinear]
+          PIOP to use to prove the AIR [default: univariate] [possible values: univariate, multilinear]
   -m, --pcs-merkle-hash <PCS_MERKLE_HASH>
-          [default: poseidon2] [possible values: keccak, poseidon2]
+          Merkle hash to use in PCS [default: poseidon2] [possible values: poseidon2, keccak]
   -r, --log-blowup <LOG_BLOWUP>
-          [default: 1]
+          Logarithmic blowup factor to use (inverse of RS code rate) [default: 1]
   -l, --log-signatures <LOG_SIGNATURES>
           Logarithmic amount of signatures to aggregate.
           Requires 'log-blowup + log-signatures <= 17' when 'piop = univariate'.
           Requires 'log-blowup + log-signatures <= 7' when 'piop = multilinear'.
   -p, --pow-bits <POW_BITS>
-          [default: 0]
-  -s, --soundness-type <SOUNDNESS_TYPE>
-          [default: provable] [possible values: provable, conjecture]
+          Maximum proof-of-work bits to use [default: 0]
+  -s, --security-assumption <SECURITY_ASSUMPTION>
+          Security assumption of PCS to use [default: johnson-bound] [possible values: johnson-bound, capacity-bound]
   -h, --help
           Print help
   -V, --version

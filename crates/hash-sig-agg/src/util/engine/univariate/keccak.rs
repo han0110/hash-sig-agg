@@ -1,6 +1,9 @@
 use crate::{
     poseidon2::{E, F},
-    util::engine::{SoundnessType, univariate::UnivariateEngineConfig},
+    util::engine::{
+        SecurityAssumption,
+        univariate::{UnivariateEngineConfig, num_fri_queries},
+    },
 };
 use p3_challenger::{HashChallenger, SerializingChallenger32};
 use p3_commit::ExtensionMmcs;
@@ -27,7 +30,7 @@ impl UnivariateEngineConfig for UnivariateConfigKeccak {
         log_blowup: usize,
         log_final_poly_len: usize,
         proof_of_work_bits: usize,
-        soundness_type: SoundnessType,
+        security_assumption: SecurityAssumption,
     ) -> Self {
         let u64_hash = U64Hash::new(KeccakF {});
         let field_hash = FieldHash::new(u64_hash);
@@ -38,7 +41,7 @@ impl UnivariateEngineConfig for UnivariateConfigKeccak {
         let fri_config = FriConfig {
             log_blowup,
             log_final_poly_len,
-            num_queries: soundness_type.num_queries(log_blowup, proof_of_work_bits),
+            num_queries: num_fri_queries(log_blowup, proof_of_work_bits, security_assumption),
             proof_of_work_bits,
             arity_bits: 3,
             mmcs: challenge_mmcs,
