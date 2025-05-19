@@ -1,6 +1,6 @@
 use crate::{
     poseidon2::{E, F, Poseidon2, RC16, RC24},
-    util::engine::{EngineConfig, SoundnessType},
+    util::engine::{SoundnessType, univariate::UnivariateEngineConfig},
 };
 use p3_challenger::DuplexChallenger;
 use p3_commit::ExtensionMmcs;
@@ -20,9 +20,9 @@ pub type ChallengeMmcs = ExtensionMmcs<F, E, ValMmcs>;
 pub type Challenger = DuplexChallenger<F, Poseidon2<24>, 24, 16>;
 pub type Dft = Radix2DitParallel<F>;
 pub type Pcs = TwoAdicFriPcsSharedCap<F, Dft, ValMmcs, ChallengeMmcs, [F; 8]>;
-pub type Poseidon2Config = StarkConfig<Pcs, E, Challenger>;
+pub type UnivariateConfigPoseidon2 = StarkConfig<Pcs, E, Challenger>;
 
-impl EngineConfig for Poseidon2Config {
+impl UnivariateEngineConfig for UnivariateConfigPoseidon2 {
     fn new(
         log_blowup: usize,
         log_final_poly_len: usize,
@@ -55,16 +55,13 @@ impl EngineConfig for Poseidon2Config {
             mmcs: challenge_mmcs,
         };
         let pcs = Pcs::new(dft, val_mmcs, fri_config);
-        Self::new(pcs)
-    }
-
-    fn new_challenger() -> Self::Challenger {
-        Challenger::new(Poseidon2::new(
+        let challenger = Challenger::new(Poseidon2::new(
             ExternalLayerConstants::new(
                 RC24.beginning_full_round_constants.to_vec(),
                 RC24.ending_full_round_constants.to_vec(),
             ),
             RC24.partial_round_constants.to_vec(),
-        ))
+        ));
+        Self::new(pcs, challenger)
     }
 }

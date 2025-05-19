@@ -5,7 +5,7 @@ for i, r in enumerate([1, 2, 3]):
         print("| | | | | | | |")
     for t in [4, 8, 16, 24]:
         try:
-            path = f"report/r{r}_t{t}"
+            path = f"report/uv_r{r}_t{t}"
             lines = open(path).readlines()[-13:]
             report = [
                 next(

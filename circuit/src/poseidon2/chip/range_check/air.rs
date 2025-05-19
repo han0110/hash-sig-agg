@@ -7,9 +7,9 @@ use crate::poseidon2::{
 };
 use core::borrow::Borrow;
 use p3_air::{Air, AirBuilder, BaseAir, BaseAirWithPublicValues};
+use p3_air_ext::InteractionBuilder;
 use p3_field::PrimeCharacteristicRing;
 use p3_matrix::Matrix;
-use p3_uni_stark_ext::InteractionAirBuilder;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct RangeCheckAir;
@@ -24,14 +24,14 @@ impl BaseAirWithPublicValues<F> for RangeCheckAir {}
 
 impl<AB> Air<AB> for RangeCheckAir
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
 
-        let local = main.row_slice(0);
-        let next = main.row_slice(1);
+        let local = main.row_slice(0).unwrap();
+        let next = main.row_slice(1).unwrap();
         let local: &RangeCheckCols<AB::Var> = (*local).borrow();
         let next: &RangeCheckCols<AB::Var> = (*next).borrow();
 
@@ -81,7 +81,7 @@ fn eval_range_check_transition<AB>(
 #[inline]
 fn receive_range_check<AB>(builder: &mut AB, cols: &RangeCheckCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_receive(Bus::RangeCheck as usize, [cols.value], cols.mult);
 }

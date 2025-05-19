@@ -18,9 +18,9 @@ use core::{borrow::Borrow, iter};
 use hash_sig_verifier::instantiation::poseidon2::CHUNK_SIZE;
 use itertools::Itertools;
 use p3_air::{Air, AirBuilder, BaseAir, BaseAirWithPublicValues};
+use p3_air_ext::InteractionBuilder;
 use p3_field::PrimeCharacteristicRing;
 use p3_matrix::Matrix;
-use p3_uni_stark_ext::InteractionAirBuilder;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct DecompositionAir;
@@ -35,14 +35,14 @@ impl BaseAirWithPublicValues<F> for DecompositionAir {}
 
 impl<AB> Air<AB> for DecompositionAir
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
 
-        let local = main.row_slice(0);
-        let next = main.row_slice(1);
+        let local = main.row_slice(0).unwrap();
+        let next = main.row_slice(1).unwrap();
         let local: &DecompositionCols<AB::Var> = (*local).borrow();
         let next: &DecompositionCols<AB::Var> = (*next).borrow();
 
@@ -315,7 +315,7 @@ where
 
 fn send_chain<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     let i_offset = cols
         .decomposition_inds()
@@ -345,7 +345,7 @@ where
 #[inline]
 fn send_range_check<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     for limb in cols
         .value_ls_limbs
@@ -360,7 +360,7 @@ where
 #[inline]
 fn receive_decomposition<AB>(builder: &mut AB, cols: &DecompositionCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_receive(
         Bus::Decomposition as usize,

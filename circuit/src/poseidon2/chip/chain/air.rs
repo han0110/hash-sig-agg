@@ -15,10 +15,10 @@ use crate::{
 use core::{borrow::Borrow, iter};
 use itertools::Itertools;
 use p3_air::{Air, AirBuilder, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
+use p3_air_ext::{InteractionBuilder, SubAirBuilder};
 use p3_field::{Algebra, PrimeCharacteristicRing};
 use p3_matrix::Matrix;
 use p3_poseidon2_air::Poseidon2Air;
-use p3_uni_stark_ext::{InteractionAirBuilder, SubAirBuilder};
 use std::sync::Arc;
 
 #[derive(Clone, Debug)]
@@ -56,21 +56,21 @@ impl BaseAirWithPublicValues<F> for ChainAir {
 
 impl<AB> Air<AB> for ChainAir
 where
-    AB: InteractionAirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionBuilder<F = F> + AirBuilderWithPublicValues,
     AB::Expr: Algebra<F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
 
-        let local = main.row_slice(0);
-        let next = main.row_slice(1);
+        let local = main.row_slice(0).unwrap();
+        let next = main.row_slice(1).unwrap();
         let local: &ChainCols<AB::Var> = (*local).borrow();
         let next: &ChainCols<AB::Var> = (*next).borrow();
 
         if !AB::ONLY_INTERACTION {
             self.0
-                .eval(&mut SubAirBuilder::new(builder, 0..self.0.width()));
+                .eval(&mut SubAirBuilder::new(builder, 0, self.0.width()));
             eval_constriants(builder, local, next);
         }
 
@@ -233,7 +233,7 @@ where
 #[inline]
 fn receive_parameter<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_receive(
         Bus::Parameter as usize,
@@ -245,7 +245,7 @@ where
 #[inline]
 fn receive_chain<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_receive(
         Bus::Chain as usize,
@@ -261,7 +261,7 @@ where
 #[inline]
 fn send_merkle_tree<AB>(builder: &mut AB, local: &ChainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_send(
         Bus::MerkleLeaf as usize,

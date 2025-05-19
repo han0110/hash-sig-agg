@@ -21,8 +21,14 @@ export RUST_LOG=info
 
 for R in 1 2 3; do for T in 4 8 16 24; do
     export RAYON_NUM_THREADS=$T
-    OUTPUT="report/r${R}_t${T}"
-    RUN="cargo run --quiet --profile bench --example hash-sig-agg -- --log-signatures 13 --log-blowup $R"
+    OUTPUT="report/uv_r${R}_t${T}"
+    RUN="cargo run --quiet --profile bench --example hash-sig-agg -- \
+        --piop univariate \
+        --pcs-merkle-hash poseidon2 \
+        --log-blowup $R \
+        --log-signatures 13 \
+        --pow-bits 0 \
+        --soundness-type provable"
     $RUN > $OUTPUT
     measure_peak_memory $RUN >> $OUTPUT
 done done

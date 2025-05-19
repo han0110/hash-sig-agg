@@ -13,8 +13,8 @@ use crate::{
     util::chip::Chip,
 };
 use p3_air::{Air, AirBuilderWithPublicValues, BaseAir, BaseAirWithPublicValues};
+use p3_air_ext::{InteractionBuilder, ProverInput, VerifierInput};
 use p3_maybe_rayon::prelude::*;
-use p3_uni_stark_ext::{InteractionAirBuilder, ProverInput, VerifierInput};
 use tracing::instrument;
 
 pub mod chain;
@@ -68,7 +68,7 @@ impl BaseAirWithPublicValues<F> for HashSigAggAir {
 
 impl<AB> Air<AB> for HashSigAggAir
 where
-    AB: InteractionAirBuilder<F = F> + AirBuilderWithPublicValues,
+    AB: InteractionBuilder<F = F> + AirBuilderWithPublicValues,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
@@ -151,12 +151,12 @@ pub fn verifier_inputs(epoch: u32, msg: [u8; MSG_LEN]) -> Vec<VerifierInput<F, H
 mod test {
     use crate::{
         poseidon2::{chip::generate_prover_inputs, hash_sig::test::mock_vi},
-        util::engine::{Engine, keccak::KeccakConfig},
+        util::engine::univariate::{UnivariateEngine, keccak::UnivariateConfigKeccak},
     };
 
     #[test]
     fn chip() {
-        let engine = Engine::<KeccakConfig>::fastest();
+        let engine = UnivariateEngine::<UnivariateConfigKeccak>::fastest();
         for log_sigs in 4..8 {
             let vi = mock_vi(1 << log_sigs);
             let inputs = generate_prover_inputs(engine.log_blowup(), vi);

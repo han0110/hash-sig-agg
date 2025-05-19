@@ -1,7 +1,7 @@
 use p3_air::{Air, BaseAirWithPublicValues};
+use p3_air_ext::{ProverInput, SymbolicAirBuilder, VerifierInput};
 use p3_field::Field;
 use p3_matrix::dense::RowMajorMatrix;
-use p3_uni_stark_ext::{ProverInput, SymbolicAirBuilder, VerifierInput};
 
 pub trait Chip<Val> {
     type Air;

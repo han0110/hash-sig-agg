@@ -7,8 +7,8 @@ use crate::poseidon2::{
 };
 use core::{borrow::Borrow, iter};
 use p3_air::{Air, AirBuilder, BaseAir, BaseAirWithPublicValues};
+use p3_air_ext::InteractionBuilder;
 use p3_matrix::Matrix;
-use p3_uni_stark_ext::InteractionAirBuilder;
 
 #[derive(Clone, Copy, Debug, Default)]
 pub struct MainAir;
@@ -23,14 +23,14 @@ impl BaseAirWithPublicValues<F> for MainAir {}
 
 impl<AB> Air<AB> for MainAir
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     #[inline]
     fn eval(&self, builder: &mut AB) {
         let main = builder.main();
 
-        let local = main.row_slice(0);
-        let next = main.row_slice(1);
+        let local = main.row_slice(0).unwrap();
+        let next = main.row_slice(1).unwrap();
         let local: &MainCols<AB::Var> = (*local).borrow();
         let next: &MainCols<AB::Var> = (*next).borrow();
 
@@ -65,7 +65,7 @@ where
 #[inline]
 fn send_parameter<AB>(builder: &mut AB, cols: &MainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_send(
         Bus::Parameter as usize,
@@ -77,7 +77,7 @@ where
 #[inline]
 fn send_msg_hash<AB>(builder: &mut AB, cols: &MainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_send(
         Bus::MerkleRootAndMsgHash as usize,
@@ -92,7 +92,7 @@ where
 #[inline]
 fn send_decomposition<AB>(builder: &mut AB, cols: &MainCols<AB::Var>)
 where
-    AB: InteractionAirBuilder<F = F>,
+    AB: InteractionBuilder<F = F>,
 {
     builder.push_send(
         Bus::Decomposition as usize,
