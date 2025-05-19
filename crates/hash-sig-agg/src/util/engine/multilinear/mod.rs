@@ -1,6 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds, clippy::multiple_bound_locations)]
 
-use crate::util::engine::SoundnessType;
+use crate::util::engine::SecurityAssumption;
 use p3_air::{Air, BaseAirWithPublicValues};
 use p3_field::{PrimeField32, TwoAdicField};
 use p3_hyperplonk::{
@@ -14,7 +14,11 @@ use p3_hyperplonk::{
 pub mod keccak;
 
 pub trait MultilinearEngineConfig: HyperPlonkGenericConfig {
-    fn new(log_blowup: usize, proof_of_work_bits: usize, soundness_type: SoundnessType) -> Self;
+    fn new(
+        log_blowup: usize,
+        proof_of_work_bits: usize,
+        security_assumption: SecurityAssumption,
+    ) -> Self;
 }
 
 pub struct MultilnearEngine<C> {
@@ -29,10 +33,10 @@ where
     pub fn new(
         log_blowup: usize,
         proof_of_work_bits: usize,
-        soundness_type: SoundnessType,
+        security_assumption: SecurityAssumption,
     ) -> Self {
         Self {
-            config: C::new(log_blowup, proof_of_work_bits, soundness_type),
+            config: C::new(log_blowup, proof_of_work_bits, security_assumption),
         }
     }
 

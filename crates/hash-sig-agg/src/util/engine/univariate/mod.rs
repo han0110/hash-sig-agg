@@ -1,6 +1,6 @@
 #![allow(clippy::type_repetition_in_bounds, clippy::multiple_bound_locations)]
 
-use crate::util::engine::SoundnessType;
+use crate::util::engine::SecurityAssumption;
 use p3_air::{Air, BaseAirWithPublicValues};
 use p3_uni_stark_ext::{
     PcsError, Proof, ProverConstraintFolder, ProverInput, ProverInteractionFolder, ProvingKey,
@@ -16,7 +16,7 @@ pub trait UnivariateEngineConfig: StarkGenericConfig {
         log_blowup: usize,
         log_final_poly_len: usize,
         proof_of_work_bits: usize,
-        soundness_type: SoundnessType,
+        security_assumption: SecurityAssumption,
     ) -> Self;
 }
 
@@ -30,21 +30,21 @@ impl<C: UnivariateEngineConfig> UnivariateEngine<C> {
         log_blowup: usize,
         log_final_poly_len: usize,
         proof_of_work_bits: usize,
-        soundness_type: SoundnessType,
+        security_assumption: SecurityAssumption,
     ) -> Self {
         Self {
             config: C::new(
                 log_blowup,
                 log_final_poly_len,
                 proof_of_work_bits,
-                soundness_type,
+                security_assumption,
             ),
             log_blowup,
         }
     }
 
     pub fn fastest() -> Self {
-        Self::new(1, 0, 0, SoundnessType::Provable)
+        Self::new(1, 0, 0, SecurityAssumption::JohnsonBound)
     }
 
     pub const fn log_blowup(&self) -> usize {
@@ -118,5 +118,18 @@ impl<C: UnivariateEngineConfig> UnivariateEngine<C> {
         let (vk, pk) = self.keygen(&verifier_inputs);
         let proof = self.prove(&pk, prover_inputs);
         self.verify(&vk, verifier_inputs, &proof).unwrap();
+    }
+}
+
+pub const fn num_fri_queries(
+    log_blowup: usize,
+    proof_of_work_bits: usize,
+    security_assumption: SecurityAssumption,
+) -> usize {
+    match security_assumption {
+        SecurityAssumption::JohnsonBound => {
+            usize::div_ceil(2 * (128 - proof_of_work_bits), log_blowup)
+        }
+        SecurityAssumption::CapacityBound => usize::div_ceil(128 - proof_of_work_bits, log_blowup),
     }
 }

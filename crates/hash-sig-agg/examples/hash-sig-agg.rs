@@ -29,10 +29,13 @@ static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
 #[derive(Clone, Debug, clap::Parser)]
 #[command(version, about)]
 struct Args {
+    /// PIOP to use to prove the AIR.
     #[arg(long, short = 'i', default_value_t = String::from("univariate"), value_parser = PossibleValuesParser::new(["univariate", "multilinear"]))]
     piop: String,
-    #[arg(long, short = 'm', default_value_t = String::from("poseidon2"), value_parser = PossibleValuesParser::new(["keccak", "poseidon2"]))]
+    /// Merkle hash to use in PCS.
+    #[arg(long, short = 'm', default_value_t = String::from("poseidon2"), value_parser = PossibleValuesParser::new(["poseidon2", "keccak"]))]
     pcs_merkle_hash: String,
+    /// Logarithmic blowup factor to use (inverse of RS code rate).
     #[arg(long, short = 'r', default_value_t = 1, value_parser = RangedU64ValueParser::<usize>::new().range(1..F::TWO_ADICITY as _))]
     log_blowup: usize,
     /// Logarithmic amount of signatures to aggregate.
@@ -40,10 +43,12 @@ struct Args {
     /// Requires 'log-blowup + log-signatures <= 7' when 'piop = multilinear'.
     #[arg(long, short = 'l', verbatim_doc_comment)]
     log_signatures: Option<usize>,
+    /// Maximum proof-of-work bits to use.
     #[arg(long, short = 'p', default_value_t = 0)]
     pow_bits: usize,
-    #[arg(long, short = 's', default_value_t = String::from("provable"), value_parser = PossibleValuesParser::new(["provable", "conjecture"]))]
-    soundness_type: String,
+    /// Security assumption of PCS to use.
+    #[arg(long, short = 's', default_value_t = String::from("johnson-bound"), value_parser = PossibleValuesParser::new(["johnson-bound", "capacity-bound"]))]
+    security_assumption: String,
 }
 
 fn main() {
@@ -53,7 +58,7 @@ fn main() {
         log_blowup,
         log_signatures,
         pow_bits,
-        soundness_type,
+        security_assumption,
     }: Args = Parser::parse();
 
     let log_signatures = match (piop.as_str(), log_signatures) {
@@ -75,7 +80,7 @@ fn main() {
         ("multilinear", log_signatures) => log_signatures.unwrap_or(6),
         _ => unreachable!(),
     };
-    let soundness_type = soundness_type.parse().unwrap();
+    let security_assumption = security_assumption.parse().unwrap();
 
     match piop.as_str() {
         "univariate" => {
@@ -86,7 +91,7 @@ fn main() {
                         log_blowup,
                         log_final_poly_len,
                         pow_bits,
-                        soundness_type,
+                        security_assumption,
                     );
                     run_univariate(&engine, log_signatures);
                 }
@@ -95,7 +100,7 @@ fn main() {
                         log_blowup,
                         log_final_poly_len,
                         pow_bits,
-                        soundness_type,
+                        security_assumption,
                     );
                     run_univariate(&engine, log_signatures);
                 }
@@ -107,7 +112,7 @@ fn main() {
                 let engine = MultilnearEngine::<MultilinearConfigKeccak>::new(
                     log_blowup,
                     pow_bits,
-                    soundness_type,
+                    security_assumption,
                 );
                 run_multilinear(&engine, log_signatures);
             }
