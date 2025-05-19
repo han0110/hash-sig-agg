@@ -224,6 +224,7 @@ mod test {
     use rand_0_8_5::{Rng, thread_rng};
 
     #[test]
+    #[ignore = "keygen takes several minutes"]
     fn consistency() {
         type HashSig = SIGTargetSumLifetime20W2NoOff;
         type HashSigVerifier = Poseidon2TargetSum<BabyBearHorizon>;

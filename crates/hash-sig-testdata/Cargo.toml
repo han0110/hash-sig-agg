@@ -5,7 +5,6 @@ edition.workspace = true
 version.workspace = true
 
 [dependencies]
-bincode.workspace = true
 rand.workspace = true
 rayon.workspace = true
 

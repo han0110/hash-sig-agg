@@ -6,6 +6,8 @@ version.workspace = true
 
 [dependencies]
 itertools.workspace = true
+tracing.workspace = true
+
 p3-air.workspace = true
 p3-baby-bear.workspace = true
 p3-challenger.workspace = true
@@ -21,7 +23,6 @@ p3-poseidon2.workspace = true
 p3-poseidon2-air.workspace = true
 p3-sha256.workspace = true
 p3-symmetric.workspace = true
-tracing.workspace = true
 
 p3-air-ext.workspace = true
 p3-fri-ext.workspace = true
