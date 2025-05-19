@@ -9,6 +9,8 @@
 └── hash-sig-testdata    # Testdata generator
 ```
 
+Note that the `hash-sig-verifier` is using an [alternative tweak encoding](https://github.com/han0110/hash-sig/commit/800059fb8e07ef9e22904ccdb8889109017da8b5) to make it more arithmetization friendly.
+
 ## Run
 
 ```
