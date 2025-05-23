@@ -27,16 +27,6 @@ pub trait MaybeUninitField<F: PrimeField>: BorrowMut<MaybeUninit<F>> {
     }
 
     #[inline]
-    fn write_u8(&mut self, value: u8) {
-        self.write_f(F::from_u8(value));
-    }
-
-    #[inline]
-    fn write_u16(&mut self, value: u16) {
-        self.write_f(F::from_u16(value));
-    }
-
-    #[inline]
     fn write_u32(&mut self, value: u32) {
         self.write_f(F::from_u32(value));
     }
@@ -65,13 +55,6 @@ pub trait MaybeUninitFieldSlice<F: PrimeField>: AsMut<[MaybeUninit<F>]> {
         self.as_mut()
             .iter_mut()
             .for_each(MaybeUninitField::write_zero);
-    }
-
-    #[inline]
-    fn fill_one(&mut self) {
-        self.as_mut()
-            .iter_mut()
-            .for_each(MaybeUninitField::write_one);
     }
 }
 

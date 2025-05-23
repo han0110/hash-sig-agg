@@ -1,5 +1,5 @@
 [workspace]
-members = ["crates/hash-sig-agg", "crates/hash-sig-verifier", "crates/hash-sig-testdata"]
+members = ["crates/*"]
 resolver = "2"
 
 [workspace.package]
