@@ -625,7 +625,6 @@ dependencies = [
  "p3-merkle-tree",
  "p3-ml-pcs",
  "p3-poseidon2",
- "p3-poseidon2-air",
  "p3-poseidon2-util",
  "p3-sha256",
  "p3-symmetric",

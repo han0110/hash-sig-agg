@@ -11,26 +11,13 @@ tracing.workspace = true
 p3-air.workspace = true
 p3-baby-bear.workspace = true
 p3-challenger.workspace = true
-p3-commit.workspace = true
-p3-dft.workspace = true
 p3-field.workspace = true
-p3-keccak.workspace = true
 p3-koala-bear.workspace = true
 p3-matrix.workspace = true
-p3-maybe-rayon = { workspace = true, features = ["parallel"] }
-p3-merkle-tree.workspace = true
-p3-poseidon2.workspace = true
-p3-poseidon2-air.workspace = true
-p3-sha256.workspace = true
-p3-symmetric.workspace = true
+p3-maybe-rayon.workspace = true
 
 p3-air-ext.workspace = true
-p3-fri-ext.workspace = true
-p3-hyperplonk.workspace = true
-p3-ml-pcs.workspace = true
 p3-poseidon2-util = { workspace = true, features = ["air"] }
-p3-uni-stark-ext.workspace = true
-p3-whir = { workspace = true, features = ["parallel"] }
 
 hash-sig-verifier.workspace = true
 
@@ -41,13 +28,29 @@ serde.workspace = true
 tracing-forest.workspace = true
 tracing-subscriber.workspace = true
 
+p3-dft.workspace = true
+p3-keccak.workspace = true
+p3-merkle-tree.workspace = true
+p3-poseidon2.workspace = true
+p3-sha256.workspace = true
+p3-symmetric.workspace = true
+
+p3-air-ext = { workspace = true, features = ["check-constraints"] }
+p3-commit.workspace = true
+p3-fri-ext.workspace = true
+p3-hyperplonk.workspace = true
+p3-ml-pcs.workspace = true
+p3-uni-stark-ext.workspace = true
+p3-whir = { workspace = true, features = ["parallel"] }
+
 hash-sig-testdata.workspace = true
 
 [target.'cfg(not(target_env = "msvc"))'.dev-dependencies]
 tikv-jemallocator = "0.6"
 
 [features]
-check-constraints = ["p3-uni-stark-ext/check-constraints", "p3-hyperplonk/check-constraints"]
+default = ["parallel"]
+parallel = ["p3-maybe-rayon/parallel"]
 
 [lints]
 workspace = true

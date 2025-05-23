@@ -3,18 +3,16 @@ use clap::{
     builder::{PossibleValuesParser, RangedU64ValueParser},
 };
 use core::fmt::Debug;
+use engine::{
+    multilinear::{MultilinearEngineConfig, MultilnearEngine, keccak::MultilinearConfigKeccak},
+    univariate::{
+        UnivariateEngine, UnivariateEngineConfig, keccak::UnivariateConfigKeccak,
+        poseidon2::UnivariateConfigPoseidon2,
+    },
+};
 use hash_sig_agg::{
-    poseidon2::{
-        F,
-        chip::{generate_prover_inputs, verifier_inputs},
-    },
-    util::engine::{
-        multilinear::{MultilinearEngineConfig, MultilnearEngine, keccak::MultilinearConfigKeccak},
-        univariate::{
-            UnivariateEngine, UnivariateEngineConfig, keccak::UnivariateConfigKeccak,
-            poseidon2::UnivariateConfigPoseidon2,
-        },
-    },
+    air::{generate_prover_inputs, verifier_inputs},
+    hash_sig::F,
 };
 use hash_sig_testdata::mock_vi;
 use p3_commit::{Pcs, PolynomialSpace};
@@ -22,6 +20,8 @@ use p3_field::TwoAdicField;
 use p3_ml_pcs::MlPcs;
 use std::{process, time::Instant};
 use util::{init_tracing, print_summary};
+
+mod engine;
 
 #[cfg_attr(not(target_env = "msvc"), global_allocator)]
 static GLOBAL: tikv_jemallocator::Jemalloc = tikv_jemallocator::Jemalloc;
@@ -51,6 +51,16 @@ struct Args {
     security_assumption: String,
 }
 
+fn max_log_signatures(piop: &str) -> usize {
+    match piop {
+        // `Chain` has 117 rows per sig
+        "univariate" => F::TWO_ADICITY - 7,
+        // `Chain` has 117 rows per sig, `Chain` and `MerkleTree` have >512 columns.
+        "multilinear" => F::TWO_ADICITY - 7 - 10,
+        _ => unreachable!(),
+    }
+}
+
 fn main() {
     let Args {
         piop,
@@ -62,16 +72,10 @@ fn main() {
     }: Args = Parser::parse();
 
     let log_signatures = match (piop.as_str(), log_signatures) {
-        ("univariate", Some(log_signatures)) if log_blowup + log_signatures > 17 => {
+        (piop, Some(log_signatures)) if log_blowup + log_signatures > max_log_signatures(piop) => {
             eprintln!(
-                "error: insufficient two-adicity, requires 'log_blowup + log_signatures <= 17' but got {}",
-                log_blowup + log_signatures
-            );
-            process::exit(2)
-        }
-        ("multilinear", Some(log_signatures)) if log_blowup + log_signatures > 7 => {
-            eprintln!(
-                "error: insufficient two-adicity, requires 'log_blowup + log_signatures <= 7' but got {}",
+                "error: insufficient two-adicity, requires 'log_blowup + log_signatures <= {}' but got {}",
+                max_log_signatures(piop),
                 log_blowup + log_signatures
             );
             process::exit(2)
