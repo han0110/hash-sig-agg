@@ -39,6 +39,7 @@ impl MultilinearEngineConfig for MultilinearConfigKeccak {
                 SecurityAssumption::CapacityBound => p3_whir::SecurityAssumption::CapacityBound,
             },
             starting_log_inv_rate: log_blowup,
+            rs_domain_initial_reduction_factor: 3,
         };
         let pcs = Pcs::new(dft, whir_params);
         let challenger = Challenger::from_hasher(Vec::new(), Keccak256Hash {});
