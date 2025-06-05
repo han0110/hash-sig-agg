@@ -334,7 +334,11 @@ mod util {
     ) {
         let throughput = (f64::from(1 << log_signatures) / proving_time.as_secs_f64()).floor();
         let proving_time = human_time(proving_time.as_nanos());
-        let proof_size = human_size(bincode::serialize(proof).unwrap().len());
+        let proof_size = human_size(
+            bincode::serde::encode_to_vec(proof, bincode::config::standard())
+                .unwrap()
+                .len(),
+        );
         let verifying_time = human_time(verifying_time.as_nanos());
 
         println!("proving time: {proving_time}");
